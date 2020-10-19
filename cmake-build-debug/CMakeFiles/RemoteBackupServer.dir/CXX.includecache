@@ -1,0 +1,16 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/captain_highlander/Scrivania/Università/Programmazione di sistema/RemoteBackup/Server/main.cpp
+iostream
+-
+iostream
+-
+boost/asio.hpp
+-
+
