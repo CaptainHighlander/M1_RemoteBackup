@@ -63,10 +63,10 @@ RM = /snap/clion/129/bin/cmake/linux/bin/cmake -E rm -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = "/home/captain_highlander/Scrivania/Università/Programmazione di sistema/RemoteBackup"
+CMAKE_SOURCE_DIR = "/home/captain_highlander/Scrivania/Università/Programmazione di sistema/M1_RemoteBackup"
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = "/home/captain_highlander/Scrivania/Università/Programmazione di sistema/RemoteBackup/cmake-build-debug"
+CMAKE_BINARY_DIR = "/home/captain_highlander/Scrivania/Università/Programmazione di sistema/M1_RemoteBackup/cmake-build-debug"
 
 # Include any dependencies generated for this target.
 include CMakeFiles/RemoteBackupServer.dir/depend.make
@@ -79,28 +79,58 @@ include CMakeFiles/RemoteBackupServer.dir/flags.make
 
 CMakeFiles/RemoteBackupServer.dir/Server/main.cpp.o: CMakeFiles/RemoteBackupServer.dir/flags.make
 CMakeFiles/RemoteBackupServer.dir/Server/main.cpp.o: ../Server/main.cpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir="/home/captain_highlander/Scrivania/Università/Programmazione di sistema/RemoteBackup/cmake-build-debug/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/RemoteBackupServer.dir/Server/main.cpp.o"
-	/usr/bin/clang++-8  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/RemoteBackupServer.dir/Server/main.cpp.o -c "/home/captain_highlander/Scrivania/Università/Programmazione di sistema/RemoteBackup/Server/main.cpp"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir="/home/captain_highlander/Scrivania/Università/Programmazione di sistema/M1_RemoteBackup/cmake-build-debug/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/RemoteBackupServer.dir/Server/main.cpp.o"
+	/usr/bin/clang++-8  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/RemoteBackupServer.dir/Server/main.cpp.o -c "/home/captain_highlander/Scrivania/Università/Programmazione di sistema/M1_RemoteBackup/Server/main.cpp"
 
 CMakeFiles/RemoteBackupServer.dir/Server/main.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/RemoteBackupServer.dir/Server/main.cpp.i"
-	/usr/bin/clang++-8 $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E "/home/captain_highlander/Scrivania/Università/Programmazione di sistema/RemoteBackup/Server/main.cpp" > CMakeFiles/RemoteBackupServer.dir/Server/main.cpp.i
+	/usr/bin/clang++-8 $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E "/home/captain_highlander/Scrivania/Università/Programmazione di sistema/M1_RemoteBackup/Server/main.cpp" > CMakeFiles/RemoteBackupServer.dir/Server/main.cpp.i
 
 CMakeFiles/RemoteBackupServer.dir/Server/main.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/RemoteBackupServer.dir/Server/main.cpp.s"
-	/usr/bin/clang++-8 $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S "/home/captain_highlander/Scrivania/Università/Programmazione di sistema/RemoteBackup/Server/main.cpp" -o CMakeFiles/RemoteBackupServer.dir/Server/main.cpp.s
+	/usr/bin/clang++-8 $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S "/home/captain_highlander/Scrivania/Università/Programmazione di sistema/M1_RemoteBackup/Server/main.cpp" -o CMakeFiles/RemoteBackupServer.dir/Server/main.cpp.s
+
+CMakeFiles/RemoteBackupServer.dir/Server/tcp_connection.cpp.o: CMakeFiles/RemoteBackupServer.dir/flags.make
+CMakeFiles/RemoteBackupServer.dir/Server/tcp_connection.cpp.o: ../Server/tcp_connection.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir="/home/captain_highlander/Scrivania/Università/Programmazione di sistema/M1_RemoteBackup/cmake-build-debug/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object CMakeFiles/RemoteBackupServer.dir/Server/tcp_connection.cpp.o"
+	/usr/bin/clang++-8  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/RemoteBackupServer.dir/Server/tcp_connection.cpp.o -c "/home/captain_highlander/Scrivania/Università/Programmazione di sistema/M1_RemoteBackup/Server/tcp_connection.cpp"
+
+CMakeFiles/RemoteBackupServer.dir/Server/tcp_connection.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/RemoteBackupServer.dir/Server/tcp_connection.cpp.i"
+	/usr/bin/clang++-8 $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E "/home/captain_highlander/Scrivania/Università/Programmazione di sistema/M1_RemoteBackup/Server/tcp_connection.cpp" > CMakeFiles/RemoteBackupServer.dir/Server/tcp_connection.cpp.i
+
+CMakeFiles/RemoteBackupServer.dir/Server/tcp_connection.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/RemoteBackupServer.dir/Server/tcp_connection.cpp.s"
+	/usr/bin/clang++-8 $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S "/home/captain_highlander/Scrivania/Università/Programmazione di sistema/M1_RemoteBackup/Server/tcp_connection.cpp" -o CMakeFiles/RemoteBackupServer.dir/Server/tcp_connection.cpp.s
+
+CMakeFiles/RemoteBackupServer.dir/Server/tcp_server.cpp.o: CMakeFiles/RemoteBackupServer.dir/flags.make
+CMakeFiles/RemoteBackupServer.dir/Server/tcp_server.cpp.o: ../Server/tcp_server.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir="/home/captain_highlander/Scrivania/Università/Programmazione di sistema/M1_RemoteBackup/cmake-build-debug/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object CMakeFiles/RemoteBackupServer.dir/Server/tcp_server.cpp.o"
+	/usr/bin/clang++-8  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/RemoteBackupServer.dir/Server/tcp_server.cpp.o -c "/home/captain_highlander/Scrivania/Università/Programmazione di sistema/M1_RemoteBackup/Server/tcp_server.cpp"
+
+CMakeFiles/RemoteBackupServer.dir/Server/tcp_server.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/RemoteBackupServer.dir/Server/tcp_server.cpp.i"
+	/usr/bin/clang++-8 $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E "/home/captain_highlander/Scrivania/Università/Programmazione di sistema/M1_RemoteBackup/Server/tcp_server.cpp" > CMakeFiles/RemoteBackupServer.dir/Server/tcp_server.cpp.i
+
+CMakeFiles/RemoteBackupServer.dir/Server/tcp_server.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/RemoteBackupServer.dir/Server/tcp_server.cpp.s"
+	/usr/bin/clang++-8 $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S "/home/captain_highlander/Scrivania/Università/Programmazione di sistema/M1_RemoteBackup/Server/tcp_server.cpp" -o CMakeFiles/RemoteBackupServer.dir/Server/tcp_server.cpp.s
 
 # Object files for target RemoteBackupServer
 RemoteBackupServer_OBJECTS = \
-"CMakeFiles/RemoteBackupServer.dir/Server/main.cpp.o"
+"CMakeFiles/RemoteBackupServer.dir/Server/main.cpp.o" \
+"CMakeFiles/RemoteBackupServer.dir/Server/tcp_connection.cpp.o" \
+"CMakeFiles/RemoteBackupServer.dir/Server/tcp_server.cpp.o"
 
 # External object files for target RemoteBackupServer
 RemoteBackupServer_EXTERNAL_OBJECTS =
 
 RemoteBackupServer: CMakeFiles/RemoteBackupServer.dir/Server/main.cpp.o
+RemoteBackupServer: CMakeFiles/RemoteBackupServer.dir/Server/tcp_connection.cpp.o
+RemoteBackupServer: CMakeFiles/RemoteBackupServer.dir/Server/tcp_server.cpp.o
 RemoteBackupServer: CMakeFiles/RemoteBackupServer.dir/build.make
 RemoteBackupServer: CMakeFiles/RemoteBackupServer.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir="/home/captain_highlander/Scrivania/Università/Programmazione di sistema/RemoteBackup/cmake-build-debug/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_2) "Linking CXX executable RemoteBackupServer"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir="/home/captain_highlander/Scrivania/Università/Programmazione di sistema/M1_RemoteBackup/cmake-build-debug/CMakeFiles" --progress-num=$(CMAKE_PROGRESS_4) "Linking CXX executable RemoteBackupServer"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/RemoteBackupServer.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.
@@ -113,6 +143,6 @@ CMakeFiles/RemoteBackupServer.dir/clean:
 .PHONY : CMakeFiles/RemoteBackupServer.dir/clean
 
 CMakeFiles/RemoteBackupServer.dir/depend:
-	cd "/home/captain_highlander/Scrivania/Università/Programmazione di sistema/RemoteBackup/cmake-build-debug" && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" "/home/captain_highlander/Scrivania/Università/Programmazione di sistema/RemoteBackup" "/home/captain_highlander/Scrivania/Università/Programmazione di sistema/RemoteBackup" "/home/captain_highlander/Scrivania/Università/Programmazione di sistema/RemoteBackup/cmake-build-debug" "/home/captain_highlander/Scrivania/Università/Programmazione di sistema/RemoteBackup/cmake-build-debug" "/home/captain_highlander/Scrivania/Università/Programmazione di sistema/RemoteBackup/cmake-build-debug/CMakeFiles/RemoteBackupServer.dir/DependInfo.cmake" --color=$(COLOR)
+	cd "/home/captain_highlander/Scrivania/Università/Programmazione di sistema/M1_RemoteBackup/cmake-build-debug" && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" "/home/captain_highlander/Scrivania/Università/Programmazione di sistema/M1_RemoteBackup" "/home/captain_highlander/Scrivania/Università/Programmazione di sistema/M1_RemoteBackup" "/home/captain_highlander/Scrivania/Università/Programmazione di sistema/M1_RemoteBackup/cmake-build-debug" "/home/captain_highlander/Scrivania/Università/Programmazione di sistema/M1_RemoteBackup/cmake-build-debug" "/home/captain_highlander/Scrivania/Università/Programmazione di sistema/M1_RemoteBackup/cmake-build-debug/CMakeFiles/RemoteBackupServer.dir/DependInfo.cmake" --color=$(COLOR)
 .PHONY : CMakeFiles/RemoteBackupServer.dir/depend
 

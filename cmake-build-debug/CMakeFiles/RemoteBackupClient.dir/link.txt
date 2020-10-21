@@ -1,1 +1,1 @@
-/usr/bin/clang++-8  -g   CMakeFiles/RemoteBackupClient.dir/Client/main.cpp.o  -o RemoteBackupClient  -lpthread 
+/usr/bin/clang++-8  -g   CMakeFiles/RemoteBackupClient.dir/Client/client.cpp.o  -o RemoteBackupClient  -lpthread -lboost_thread -lboost_system 

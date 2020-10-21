@@ -6,7 +6,7 @@
 
 #IncludeRegexTransform: 
 
-/home/captain_highlander/Scrivania/Università/Programmazione di sistema/RemoteBackup/Client/main.cpp
+/home/captain_highlander/Scrivania/Università/Programmazione di sistema/M1_RemoteBackup/Client/client.cpp
 iostream
 -
 boost/asio.hpp

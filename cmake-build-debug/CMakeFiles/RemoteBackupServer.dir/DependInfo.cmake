@@ -4,7 +4,9 @@ set(CMAKE_DEPENDS_LANGUAGES
   )
 # The set of files for implicit dependencies of each language:
 set(CMAKE_DEPENDS_CHECK_CXX
-  "/home/captain_highlander/Scrivania/Università/Programmazione di sistema/RemoteBackup/Server/main.cpp" "/home/captain_highlander/Scrivania/Università/Programmazione di sistema/RemoteBackup/cmake-build-debug/CMakeFiles/RemoteBackupServer.dir/Server/main.cpp.o"
+  "/home/captain_highlander/Scrivania/Università/Programmazione di sistema/M1_RemoteBackup/Server/main.cpp" "/home/captain_highlander/Scrivania/Università/Programmazione di sistema/M1_RemoteBackup/cmake-build-debug/CMakeFiles/RemoteBackupServer.dir/Server/main.cpp.o"
+  "/home/captain_highlander/Scrivania/Università/Programmazione di sistema/M1_RemoteBackup/Server/tcp_connection.cpp" "/home/captain_highlander/Scrivania/Università/Programmazione di sistema/M1_RemoteBackup/cmake-build-debug/CMakeFiles/RemoteBackupServer.dir/Server/tcp_connection.cpp.o"
+  "/home/captain_highlander/Scrivania/Università/Programmazione di sistema/M1_RemoteBackup/Server/tcp_server.cpp" "/home/captain_highlander/Scrivania/Università/Programmazione di sistema/M1_RemoteBackup/cmake-build-debug/CMakeFiles/RemoteBackupServer.dir/Server/tcp_server.cpp.o"
   )
 set(CMAKE_CXX_COMPILER_ID "Clang")
 

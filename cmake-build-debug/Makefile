@@ -68,10 +68,10 @@ RM = /snap/clion/129/bin/cmake/linux/bin/cmake -E rm -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = "/home/captain_highlander/Scrivania/Università/Programmazione di sistema/RemoteBackup"
+CMAKE_SOURCE_DIR = "/home/captain_highlander/Scrivania/Università/Programmazione di sistema/M1_RemoteBackup"
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = "/home/captain_highlander/Scrivania/Università/Programmazione di sistema/RemoteBackup/cmake-build-debug"
+CMAKE_BINARY_DIR = "/home/captain_highlander/Scrivania/Università/Programmazione di sistema/M1_RemoteBackup/cmake-build-debug"
 
 #=============================================================================
 # Targets provided globally by CMake.
@@ -100,9 +100,9 @@ rebuild_cache/fast: rebuild_cache
 
 # The main all target
 all: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start "/home/captain_highlander/Scrivania/Università/Programmazione di sistema/RemoteBackup/cmake-build-debug/CMakeFiles" "/home/captain_highlander/Scrivania/Università/Programmazione di sistema/RemoteBackup/cmake-build-debug/CMakeFiles/progress.marks"
+	$(CMAKE_COMMAND) -E cmake_progress_start "/home/captain_highlander/Scrivania/Università/Programmazione di sistema/M1_RemoteBackup/cmake-build-debug/CMakeFiles" "/home/captain_highlander/Scrivania/Università/Programmazione di sistema/M1_RemoteBackup/cmake-build-debug/CMakeFiles/progress.marks"
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 all
-	$(CMAKE_COMMAND) -E cmake_progress_start "/home/captain_highlander/Scrivania/Università/Programmazione di sistema/RemoteBackup/cmake-build-debug/CMakeFiles" 0
+	$(CMAKE_COMMAND) -E cmake_progress_start "/home/captain_highlander/Scrivania/Università/Programmazione di sistema/M1_RemoteBackup/cmake-build-debug/CMakeFiles" 0
 .PHONY : all
 
 # The main clean target
@@ -156,32 +156,32 @@ RemoteBackupClient/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/RemoteBackupClient.dir/build.make CMakeFiles/RemoteBackupClient.dir/build
 .PHONY : RemoteBackupClient/fast
 
-Client/main.o: Client/main.cpp.o
+Client/client.o: Client/client.cpp.o
 
-.PHONY : Client/main.o
+.PHONY : Client/client.o
 
 # target to build an object file
-Client/main.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/RemoteBackupClient.dir/build.make CMakeFiles/RemoteBackupClient.dir/Client/main.cpp.o
-.PHONY : Client/main.cpp.o
+Client/client.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/RemoteBackupClient.dir/build.make CMakeFiles/RemoteBackupClient.dir/Client/client.cpp.o
+.PHONY : Client/client.cpp.o
 
-Client/main.i: Client/main.cpp.i
+Client/client.i: Client/client.cpp.i
 
-.PHONY : Client/main.i
+.PHONY : Client/client.i
 
 # target to preprocess a source file
-Client/main.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/RemoteBackupClient.dir/build.make CMakeFiles/RemoteBackupClient.dir/Client/main.cpp.i
-.PHONY : Client/main.cpp.i
+Client/client.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/RemoteBackupClient.dir/build.make CMakeFiles/RemoteBackupClient.dir/Client/client.cpp.i
+.PHONY : Client/client.cpp.i
 
-Client/main.s: Client/main.cpp.s
+Client/client.s: Client/client.cpp.s
 
-.PHONY : Client/main.s
+.PHONY : Client/client.s
 
 # target to generate assembly for a file
-Client/main.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/RemoteBackupClient.dir/build.make CMakeFiles/RemoteBackupClient.dir/Client/main.cpp.s
-.PHONY : Client/main.cpp.s
+Client/client.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/RemoteBackupClient.dir/build.make CMakeFiles/RemoteBackupClient.dir/Client/client.cpp.s
+.PHONY : Client/client.cpp.s
 
 Server/main.o: Server/main.cpp.o
 
@@ -210,6 +210,60 @@ Server/main.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/RemoteBackupServer.dir/build.make CMakeFiles/RemoteBackupServer.dir/Server/main.cpp.s
 .PHONY : Server/main.cpp.s
 
+Server/tcp_connection.o: Server/tcp_connection.cpp.o
+
+.PHONY : Server/tcp_connection.o
+
+# target to build an object file
+Server/tcp_connection.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/RemoteBackupServer.dir/build.make CMakeFiles/RemoteBackupServer.dir/Server/tcp_connection.cpp.o
+.PHONY : Server/tcp_connection.cpp.o
+
+Server/tcp_connection.i: Server/tcp_connection.cpp.i
+
+.PHONY : Server/tcp_connection.i
+
+# target to preprocess a source file
+Server/tcp_connection.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/RemoteBackupServer.dir/build.make CMakeFiles/RemoteBackupServer.dir/Server/tcp_connection.cpp.i
+.PHONY : Server/tcp_connection.cpp.i
+
+Server/tcp_connection.s: Server/tcp_connection.cpp.s
+
+.PHONY : Server/tcp_connection.s
+
+# target to generate assembly for a file
+Server/tcp_connection.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/RemoteBackupServer.dir/build.make CMakeFiles/RemoteBackupServer.dir/Server/tcp_connection.cpp.s
+.PHONY : Server/tcp_connection.cpp.s
+
+Server/tcp_server.o: Server/tcp_server.cpp.o
+
+.PHONY : Server/tcp_server.o
+
+# target to build an object file
+Server/tcp_server.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/RemoteBackupServer.dir/build.make CMakeFiles/RemoteBackupServer.dir/Server/tcp_server.cpp.o
+.PHONY : Server/tcp_server.cpp.o
+
+Server/tcp_server.i: Server/tcp_server.cpp.i
+
+.PHONY : Server/tcp_server.i
+
+# target to preprocess a source file
+Server/tcp_server.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/RemoteBackupServer.dir/build.make CMakeFiles/RemoteBackupServer.dir/Server/tcp_server.cpp.i
+.PHONY : Server/tcp_server.cpp.i
+
+Server/tcp_server.s: Server/tcp_server.cpp.s
+
+.PHONY : Server/tcp_server.s
+
+# target to generate assembly for a file
+Server/tcp_server.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/RemoteBackupServer.dir/build.make CMakeFiles/RemoteBackupServer.dir/Server/tcp_server.cpp.s
+.PHONY : Server/tcp_server.cpp.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -220,12 +274,18 @@ help:
 	@echo "... rebuild_cache"
 	@echo "... RemoteBackupClient"
 	@echo "... RemoteBackupServer"
-	@echo "... Client/main.o"
-	@echo "... Client/main.i"
-	@echo "... Client/main.s"
+	@echo "... Client/client.o"
+	@echo "... Client/client.i"
+	@echo "... Client/client.s"
 	@echo "... Server/main.o"
 	@echo "... Server/main.i"
 	@echo "... Server/main.s"
+	@echo "... Server/tcp_connection.o"
+	@echo "... Server/tcp_connection.i"
+	@echo "... Server/tcp_connection.s"
+	@echo "... Server/tcp_server.o"
+	@echo "... Server/tcp_server.i"
+	@echo "... Server/tcp_server.s"
 .PHONY : help
 
 

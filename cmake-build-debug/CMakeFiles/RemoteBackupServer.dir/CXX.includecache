@@ -6,11 +6,21 @@
 
 #IncludeRegexTransform: 
 
-/home/captain_highlander/Scrivania/Università/Programmazione di sistema/RemoteBackup/Server/main.cpp
+/home/captain_highlander/Scrivania/Università/Programmazione di sistema/M1_RemoteBackup/Server/tcp_connection.cpp
+tcp_connection.h
+/home/captain_highlander/Scrivania/Università/Programmazione di sistema/M1_RemoteBackup/Server/tcp_connection.h
 iostream
 -
-iostream
+boost/bind.hpp
 -
+
+/home/captain_highlander/Scrivania/Università/Programmazione di sistema/M1_RemoteBackup/Server/tcp_connection.h
 boost/asio.hpp
+-
+boost/shared_ptr.hpp
+-
+boost/enable_shared_from_this.hpp
+-
+string.h
 -
 

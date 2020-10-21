@@ -1,4 +1,4 @@
-/snap/clion/129/bin/cmake/linux/bin/cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_COMPILER=/usr/bin/clang++-8 -G "CodeBlocks - Unix Makefiles" "/home/captain_highlander/Scrivania/Università/Programmazione di sistema/RemoteBackup"
+/snap/clion/129/bin/cmake/linux/bin/cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_COMPILER=/usr/bin/clang++-8 -G "CodeBlocks - Unix Makefiles" "/home/captain_highlander/Scrivania/Università/Programmazione di sistema/M1_RemoteBackup"
 -- Configuring done
 -- Generating done
--- Build files have been written to: /home/captain_highlander/Scrivania/Università/Programmazione di sistema/RemoteBackup/cmake-build-debug
+-- Build files have been written to: /home/captain_highlander/Scrivania/Università/Programmazione di sistema/M1_RemoteBackup/cmake-build-debug

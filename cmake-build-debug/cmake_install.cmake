@@ -1,4 +1,4 @@
-# Install script for directory: /home/captain_highlander/Scrivania/Università/Programmazione di sistema/RemoteBackup
+# Install script for directory: /home/captain_highlander/Scrivania/Università/Programmazione di sistema/M1_RemoteBackup
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -45,5 +45,5 @@ endif()
 
 string(REPLACE ";" "\n" CMAKE_INSTALL_MANIFEST_CONTENT
        "${CMAKE_INSTALL_MANIFEST_FILES}")
-file(WRITE "/home/captain_highlander/Scrivania/Università/Programmazione di sistema/RemoteBackup/cmake-build-debug/${CMAKE_INSTALL_MANIFEST}"
+file(WRITE "/home/captain_highlander/Scrivania/Università/Programmazione di sistema/M1_RemoteBackup/cmake-build-debug/${CMAKE_INSTALL_MANIFEST}"
      "${CMAKE_INSTALL_MANIFEST_CONTENT}")

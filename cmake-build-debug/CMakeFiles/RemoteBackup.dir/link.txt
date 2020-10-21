@@ -1,1 +1,0 @@
-/usr/bin/clang++-8  -g   CMakeFiles/RemoteBackup.dir/Server/main.cpp.o CMakeFiles/RemoteBackup.dir/Client/main.cpp.o  -o RemoteBackup  -lpthread 

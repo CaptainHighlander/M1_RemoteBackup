@@ -1,5 +1,5 @@
 file(REMOVE_RECURSE
-  "CMakeFiles/RemoteBackupClient.dir/Client/main.cpp.o"
+  "CMakeFiles/RemoteBackupClient.dir/Client/client.cpp.o"
   "RemoteBackupClient"
   "RemoteBackupClient.pdb"
 )
