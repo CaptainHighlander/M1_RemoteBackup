@@ -1,1 +1,0 @@
-/usr/bin/clang++-8  -g   CMakeFiles/RemoteBackupServer.dir/Server/main.cpp.o CMakeFiles/RemoteBackupServer.dir/Server/tcp_connection.cpp.o CMakeFiles/RemoteBackupServer.dir/Server/tcp_server.cpp.o  -o RemoteBackupServer  -lpthread -lboost_thread -lboost_system 
