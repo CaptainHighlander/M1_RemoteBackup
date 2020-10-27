@@ -34,11 +34,26 @@ int main()
         string reply, response;
         while (true)
         {
+            cout << "[DEBUG] " << response << endl;
             // Fetching response
             response = getData(client_socket);
 
             // Popping last character "\n"
             response.pop_back();
+
+            if (response == "AUTH REQUEST")
+            {
+                cout << "Insert username and password" << endl;
+            }
+            else if (response == "AUTH REQUEST RETRY")
+            {
+                cout << "Incorrect credentials. Please, try again" << endl;
+            }
+            else if (response == "AUTH REQUEST RETRY")
+            {
+                cout << "Access denied" << endl;
+                break;
+            }
 
             // Validating if the connection has to be closed
             if (response == "exit")
@@ -46,7 +61,6 @@ int main()
                 cout << "Connection terminated" << endl;
                 break;
             }
-            cout << response << endl;
 
             // Reading new message from input stream
             getline(cin, reply);

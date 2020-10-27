@@ -29,11 +29,13 @@ private:
 
     void Disconnect(void);
 
+    void DoLogin(void);
+
     ///HandleWrite() is responsible for any further actions for this client connection.
-    void HandleWrite(const boost::system::error_code& error, size_t bytes_transferred);
+    void HandleLoginWrite(const boost::system::error_code& error, size_t bytes_transferred);
 
     ///HandleRead() is responsible for any further actions for this client connection.
-    void HandleRead(const boost::system::error_code& error, size_t bytes_transferred);
+    void HandleLoginRead(const boost::system::error_code& error, size_t bytes_transferred);
 
     tcp::socket socketServer;
     ///The data to be sent is stored in the class member outgoingMessage as we need to keep the data valid until the asynchronous operation is complete.
@@ -43,5 +45,5 @@ private:
     ///The user who has logged into this connection.
     string associatedUserID;
     uint8_t failedLoginAttempts;
-    const uint8_t MAX_NUMBER_OF_FAILED_LOGINS = 3;
+    const uint8_t MAX_NUMBER_OF_FAILED_LOGINS = 2;
 };

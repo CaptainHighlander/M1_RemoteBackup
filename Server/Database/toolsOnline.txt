@@ -1,0 +1,4 @@
+COMPUTE SALT WITH LENGTH X BIT (USE 128 AS LENGTH)
+	https://www.symbionts.de/tools/random-password-salt-generator.html
+COMPUTE HASH WITH SHA-512 AND PROVIDING A SALT
+	https://www.convertstring.com/it/Hash/SHA512 
