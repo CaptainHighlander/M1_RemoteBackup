@@ -34,13 +34,13 @@ int main()
         string reply, response;
         while (true)
         {
-            cout << "[DEBUG] " << response << endl;
             // Fetching response
             response = getData(client_socket);
 
             // Popping last character "\n"
             response.pop_back();
 
+            cout << "[DEBUG] " << response << endl;
             if (response == "AUTH REQUEST")
             {
                 cout << "Insert username and password" << endl;
@@ -49,7 +49,11 @@ int main()
             {
                 cout << "Incorrect credentials. Please, try again" << endl;
             }
-            else if (response == "AUTH REQUEST RETRY")
+            else if (response == "AUTHENTICATED")
+            {
+                cout << "Successful login" << endl;
+            }
+            else if (response == "ACCESS DENIED")
             {
                 cout << "Access denied" << endl;
                 break;

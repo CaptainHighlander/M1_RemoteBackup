@@ -1,9 +1,11 @@
 #include "tcp_connection.h"
+#include "Database/DAO/dao.h"
 
-#include <iostream>
+#include <iostream> //TMP, only for debug print.
 #include <boost/bind.hpp>
 #include <openssl/sha.h>
 
+using namespace DAO;
 using namespace boost::asio;
 
 #pragma region Static public members:
@@ -59,7 +61,7 @@ void TCP_Connection::HandleLoginWrite(const boost::system::error_code& error, si
 {
     //std::cout << "[DEBUG] Write operation completed; transferred " << bytes_transferred << "bytes" << std::endl;
     //Ask for login credentials (max MAX_NUMBER_OF_FAILED_LOGINS of fails)
-    if (this->associatedUserID.empty() == true && this->failedLoginAttempts < this->MAX_NUMBER_OF_FAILED_LOGINS)
+    if (this->associatedUserID.empty() == true && this->failedLoginAttempts <= this->MAX_NUMBER_OF_FAILED_LOGINS)
     {
         //Clear previous incoming message.
         this->incomingMessage.clear();
@@ -68,13 +70,6 @@ void TCP_Connection::HandleLoginWrite(const boost::system::error_code& error, si
         async_read_until(this->socketServer, dynamic_buffer(this->incomingMessage), '\n',
                          bind(&TCP_Connection::HandleLoginRead, shared_from_this(),
                               placeholders::error, placeholders::bytes_transferred));
-    }
-    else
-    {
-        this->outgoingMessage = "ABORT";
-        async_write(this->socketServer, buffer(this->outgoingMessage + "\n"),
-                    bind(&TCP_Connection::HandleLoginWrite, shared_from_this(),
-                         placeholders::error, placeholders::bytes_transferred));
     }
 }
 
@@ -86,48 +81,44 @@ void TCP_Connection::HandleLoginRead(const boost::system::error_code& error, siz
         this->incomingMessage.pop_back();
 
         //Try to get username and password provided from the client.
-        string username;
-        string password;
         size_t pos = this->incomingMessage.find_first_of(' ');
-        if (pos != std::string::npos)
+        if (pos != string::npos)
         {
-            username = this->incomingMessage.substr(0, pos);
-            password = this->incomingMessage.substr(pos + 1);
-            /*
-            const char* salt= "fVgxLO/@nLJya.q5q.hNLzQz@:j9dx6=.8PBu0rn2#Fop?RBb+2k0n7N)/58Sxb+*itS#ugqNihf#/O5CQlOq!wr0*6HzQCxDhw)eUu8L-qI21NP4kXMSmS#nGj*?#(a";
-            std::string password = "8d46edd1a1defe33654544e08b1e43b2CaptainHighlander";
-            size_t len = password.size();
-            unsigned char hash[SHA512_DIGEST_LENGTH];
-
-            auto d1 = SHA512(password.c_str(), len, hash);
-            auto d2 = SHA512(password, size_t(4), hash);
-            if(d1 == d2)
-                std::cout << "Equals" << std::endl;
-
-            int i;
-            for (i = 0; i < SHA256_DIGEST_LENGTH; i++)
-                printf("%02x", d1[i]);
-            putchar('\n');
-            for (i = 0; i < SHA256_DIGEST_LENGTH; i++)
-                printf("%02x", d2[i]);
-            putchar('\n');
-            */
-            //Stupid authentication. It will be replaced with read from database and password hash plus salt.
-            if(username == "Riccardo" && password == "password")
+            //Authentication in progress...
+            const string username = this->incomingMessage.substr(0, pos);
+            string userPassword = this->incomingMessage.substr(pos + 1);
+            pair<bool, Dao::UserInfo> userInfomation = Dao::GetUserInfo(username);
+            if (userInfomation.first == true && username == userInfomation.second.GetUserId())
             {
-                this->associatedUserID = username;
-                async_write(this->socketServer, buffer("You are logged!\n"),
-                            bind(&TCP_Connection::HandleLoginWrite, shared_from_this(),
-                                 placeholders::error, placeholders::bytes_transferred));
+                const string userSalt = userInfomation.second.GetSalt();
+                userPassword.append(userSalt);
+                unsigned char hash[SHA512_DIGEST_LENGTH];
+                unsigned char* computedHashPassword = SHA512(reinterpret_cast<const unsigned char*>(userPassword.c_str()), userPassword.size(), hash);
+                string computedHashPasswordStr;
+                for (uint32_t i = 0; i < SHA512_DIGEST_LENGTH; i++)
+                    //computedHashPasswordStr.append(computedHashPassword[i]);
+                    //printf("%02x", );
+                std::cout << computedHashPasswordStr << std::endl;
 
-                //Successful login: don't ask
-                return;
+                //Check hash of the password provided by the user.
+                if (computedHashPasswordStr == userInfomation.second.GetPasswordHash())
+                {
+                    std::cout << "Credenziali valide" << std::endl;
+                    this->outgoingMessage = "AUTHENTICATED";
+                    this->associatedUserID = username;
+                    async_write(this->socketServer, buffer(this->outgoingMessage + "\n"),
+                                bind(&TCP_Connection::HandleLoginWrite, shared_from_this(),
+                                     placeholders::error, placeholders::bytes_transferred));
+
+                    //Successful login: don't ask again for login.
+                    return;
+                }
             }
         }
 
-        //Try again for login.
-        this->outgoingMessage = "AUTH REQUEST RETRY";
+        //Wrong login: try again or close the connection
         this->failedLoginAttempts += 1;
+        this->outgoingMessage = (this->failedLoginAttempts <= this->MAX_NUMBER_OF_FAILED_LOGINS) ? "AUTH REQUEST RETRY" : "ACCESS DENIED";
         async_write(this->socketServer, buffer(this->outgoingMessage + "\n"),
                     bind(&TCP_Connection::HandleLoginWrite, shared_from_this(),
                          placeholders::error, placeholders::bytes_transferred));
