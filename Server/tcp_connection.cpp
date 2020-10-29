@@ -2,7 +2,9 @@
 #include "Database/DAO/dao.h"
 
 #include <iostream> //TMP, only for debug print.
+#include <iomanip>
 #include <boost/bind.hpp>
+#include <boost/algorithm/string.hpp>
 #include <openssl/sha.h>
 
 using namespace DAO;
@@ -82,28 +84,37 @@ void TCP_Connection::HandleLoginRead(const boost::system::error_code& error, siz
 
         //Try to get username and password provided from the client.
         size_t pos = this->incomingMessage.find_first_of(' ');
-        if (pos != string::npos)
+        if (pos != string::npos) //User has provided an username and a password.
         {
-            //Authentication in progress...
+            /**** Authentication in progress... ****/
+
             const string username = this->incomingMessage.substr(0, pos);
             string userPassword = this->incomingMessage.substr(pos + 1);
+
+            //Try to get user's information from database.
             pair<bool, Dao::UserInfo> userInfomation = Dao::GetUserInfo(username);
+
             if (userInfomation.first == true && username == userInfomation.second.GetUserId())
             {
+                //Append salt to password.
                 const string userSalt = userInfomation.second.GetSalt();
                 userPassword.append(userSalt);
-                unsigned char hash[SHA512_DIGEST_LENGTH];
-                unsigned char* computedHashPassword = SHA512(reinterpret_cast<const unsigned char*>(userPassword.c_str()), userPassword.size(), hash);
-                string computedHashPasswordStr;
-                for (uint32_t i = 0; i < SHA512_DIGEST_LENGTH; i++)
-                    //computedHashPasswordStr.append(computedHashPassword[i]);
-                    //printf("%02x", );
-                std::cout << computedHashPasswordStr << std::endl;
+                //Compute hash(psw || salt) using SHA512 as hash algorithm
+                unsigned char computedHashPassword[SHA512_DIGEST_LENGTH];
+                SHA512(reinterpret_cast<const unsigned char*>(userPassword.c_str()), userPassword.size(), computedHashPassword);
 
-                //Check hash of the password provided by the user.
-                if (computedHashPasswordStr == userInfomation.second.GetPasswordHash())
+                //Hash converted to string
+                std::ostringstream ossComputedHashPasswordStr;
+                for(uint32_t i = 0; i < SHA512_DIGEST_LENGTH; ++i)
                 {
-                    std::cout << "Credenziali valide" << std::endl;
+                    ossComputedHashPasswordStr << std::hex << std::setfill('0') << std::setw(2) << + computedHashPassword[i];
+                }
+
+                //Compare computed hash with the hash that is in the database.
+                //boost::iequals performs a case-insensitive string comparison.
+                if (boost::iequals(ossComputedHashPasswordStr.str(), userInfomation.second.GetPasswordHash()))
+                {
+                    //Username and password are valid...
                     this->outgoingMessage = "AUTHENTICATED";
                     this->associatedUserID = username;
                     async_write(this->socketServer, buffer(this->outgoingMessage + "\n"),
@@ -116,7 +127,7 @@ void TCP_Connection::HandleLoginRead(const boost::system::error_code& error, siz
             }
         }
 
-        //Wrong login: try again or close the connection
+        //Wrong username and/or password: try again or close the connection
         this->failedLoginAttempts += 1;
         this->outgoingMessage = (this->failedLoginAttempts <= this->MAX_NUMBER_OF_FAILED_LOGINS) ? "AUTH REQUEST RETRY" : "ACCESS DENIED";
         async_write(this->socketServer, buffer(this->outgoingMessage + "\n"),

@@ -29,4 +29,3 @@ void TCP_Server::HandleAccept(const TCP_Connection::pointer& new_connection, con
     //Call StartAccept() to initiate the next accept operation.
     this->StartAccept();
 }
-
