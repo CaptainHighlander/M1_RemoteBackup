@@ -1,5 +1,8 @@
+#include "FileSystemWatcher/file_system_watcher.h"
+
 #include <iostream>
 #include <boost/asio.hpp>
+
 using namespace boost::asio;
 using namespace boost::asio::ip;
 using std::string;
@@ -52,6 +55,8 @@ int main()
             else if (response == "AUTHENTICATED")
             {
                 cout << "Successful login" << endl;
+                //Maybe it should be created in a different thread.
+                FileSystemWatcher fsw { "./", true };
             }
             else if (response == "ACCESS DENIED")
             {
