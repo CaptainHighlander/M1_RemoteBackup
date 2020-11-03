@@ -12,9 +12,10 @@ namespace fs = std::experimental::filesystem;
 class FileSystemWatcher
 {
 public:
-    enum class FileStatus { created, modified, erased };
+    enum class FileStatus { FS_Created, FS_Modified, FS_Erased };
 
     FileSystemWatcher(const string& _pathToWatch, const bool _bWatching);
+
     void StartWatch(void);
     void StopWatch(void);
     void Watching(const std::function<void (std::string, FileStatus)> &action);
@@ -25,11 +26,13 @@ private:
         bool bIsFolder = false;
         bool bIsRegularFile = false;
         fs::file_time_type fileTimeType;
+        string digest;
     };
     bool bWatching;
     string pathToWatch;
     unordered_map<string, FileInfo_s> monitoredFiles;
 
-    void CheckForDeletedPath(const std::function<void (std::string, FileStatus)> &action);
-    void CheckForCreatedOrModifiedPath(const std::function<void (std::string, FileStatus)> &action);
+    void CheckForDeletedPath(const std::function<void (string, FileStatus)> &action);
+    void CheckForCreatedOrModifiedPath(const std::function<void (string, FileStatus)> &action);
+    [[nodiscard]] static string DigestFromFile(const string& path);
 };

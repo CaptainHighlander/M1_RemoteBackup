@@ -56,7 +56,7 @@ int main()
             {
                 cout << "Successful login" << endl;
                 //Maybe it should be created in a different thread.
-                FileSystemWatcher fsw { "./", true };
+                FileSystemWatcher fsw { "../FoldersTest/Riccardo", true };
             }
             else if (response == "ACCESS DENIED")
             {
