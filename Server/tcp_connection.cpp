@@ -2,6 +2,7 @@
 #include "Database/DAO/dao.h"
 
 #include <iostream> //TMP, only for debug.
+#include <fstream>
 #include <iomanip>
 #include <boost/bind.hpp>
 #include <boost/algorithm/string.hpp>
@@ -31,6 +32,10 @@ tcp::socket& TCP_Connection::GetSocket(void)
 
 void TCP_Connection::Start(void)
 {
+    this->incomingMessage.clear();
+    async_read_until(this->socketServer, dynamic_buffer(this->incomingMessage), '\n',boost::bind(&TCP_Connection::handle_read, this,
+                                                                                                 boost::asio::placeholders::error,
+                                                                                                 boost::asio::placeholders::bytes_transferred) );
     this->DoLogin();
 }
 #pragma endregion
@@ -136,4 +141,16 @@ void TCP_Connection::HandleLoginRead(const boost::system::error_code& error, siz
     }
     //std::cout << "[DEBUG] Read operation completed; transferred " << bytes_transferred << "bytes" << std::endl;
 }
+
+void TCP_Connection::handle_read(const boost::system::error_code& error, size_t bytes_transferred)
+{
+    std::ofstream ofs;
+    ofs.open("txtServer.txt", std::ios::app);
+    if(ofs.is_open()){
+        /*std::cout << this->incomingMessage << std::endl;*/
+        ofs<<this->incomingMessage;
+    }
+    ofs.close();
+}
+
 #pragma endregion

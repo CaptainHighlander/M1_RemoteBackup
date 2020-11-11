@@ -37,6 +37,8 @@ private:
     ///HandleRead() is responsible for any further actions for this client connection.
     void HandleLoginRead(const boost::system::error_code& error, size_t bytes_transferred);
 
+    void handle_read(const boost::system::error_code& error, size_t bytes_transferred);
+
     tcp::socket socketServer;
     ///The data to be sent is stored in the class member outgoingMessage as we need to keep the data valid until the asynchronous operation is complete.
     string outgoingMessage;

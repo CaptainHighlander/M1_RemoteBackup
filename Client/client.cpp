@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <boost/asio.hpp>
+#include <fstream>
 
 using namespace boost::asio;
 using namespace boost::asio::ip;
@@ -31,9 +32,21 @@ int main()
     //Try to connect to server
     client_socket.connect(tcp::endpoint(address::from_string("127.0.0.1"), 1996));
 
+
     //Infinite loop
     try
     {
+        int length = 2048;
+        char* line = new char [length];
+        std::ifstream ifs("txtClient.txt");
+        if (ifs.is_open()){
+            while (!ifs.eof()){
+                ifs.read(line,length);
+                sendData(client_socket, line);
+            }
+            ifs.close();
+        }
+
         string reply, response;
         while (true)
         {
@@ -57,6 +70,7 @@ int main()
                 cout << "Successful login" << endl;
                 //Maybe it should be created in a different thread.
                 FileSystemWatcher fsw { "../FoldersTest/Riccardo", true };
+
             }
             else if (response == "ACCESS DENIED")
             {
