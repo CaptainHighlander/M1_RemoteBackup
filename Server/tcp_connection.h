@@ -15,8 +15,8 @@ class TCP_Connection : public boost::enable_shared_from_this<TCP_Connection>
 {
 public:
     typedef boost::shared_ptr<TCP_Connection> pointer;
-    TCP_Connection(const TCP_Connection& other) = delete;
-    void operator = (const TCP_Connection& other) = delete;
+    TCP_Connection(TCP_Connection const&) = delete;
+    TCP_Connection& operator=(TCP_Connection const&) = delete;
     ~TCP_Connection(void);
 
     static pointer Create(boost::asio::io_context& io_context);
@@ -37,7 +37,7 @@ private:
     ///HandleRead() is responsible for any further actions for this client connection.
     void HandleLoginRead(const boost::system::error_code& error, size_t bytes_transferred);
 
-    void handle_read(const boost::system::error_code& error, size_t bytes_transferred);
+    void HandleReadFile(const boost::system::error_code& error, size_t bytes_transferred);
 
     tcp::socket socketServer;
     ///The data to be sent is stored in the class member outgoingMessage as we need to keep the data valid until the asynchronous operation is complete.

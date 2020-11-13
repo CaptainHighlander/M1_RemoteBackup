@@ -5,8 +5,16 @@ set(CMAKE_CXX_STANDARD 20)
 link_libraries(-lstdc++fs)
 
 find_package(Boost 1.74.0 REQUIRED)
-add_executable(RemoteBackupClient ./Client/client.cpp ./Client/FileSystemWatcher/file_system_watcher.cpp)
+add_executable(RemoteBackupClient ./Client/main.cpp ./Client/client.cpp ./Client/FileSystemWatcher/file_system_watcher.cpp)
 add_executable(RemoteBackupServer ./Server/main.cpp ./Server/tcp_connection.cpp ./Server/tcp_server.cpp ./Server/Database/DAO/dao.cpp)
+
+# Use C++20
+target_compile_features(RemoteBackupClient PUBLIC cxx_std_20)
+target_compile_features(RemoteBackupServer PUBLIC cxx_std_20)
+if(MSVC)
+    target_compile_options(RemoteBackupClient PUBLIC "/Zc:__cplusplus")
+    target_compile_options(RemoteBackupServer PUBLIC "/Zc:__cplusplus")
+endif()
 
 target_link_libraries(RemoteBackupClient pthread)
 target_link_libraries(RemoteBackupClient boost_iostreams)

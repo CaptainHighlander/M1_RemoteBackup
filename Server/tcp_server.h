@@ -6,6 +6,8 @@ class TCP_Server
 public:
     ///Constructor: initialises an acceptor to listen connections on a TCP port.
     TCP_Server(boost::asio::io_context& io_context, tcp version, uint16_t portNumber);
+    TCP_Server(TCP_Server const&) = delete;
+    TCP_Server& operator=(TCP_Server const&) = delete;
 
 private:
     ///Creates a socket and initiates an asynchronous accept operation to wait for a new connection.

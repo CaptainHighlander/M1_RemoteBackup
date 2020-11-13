@@ -33,10 +33,11 @@ tcp::socket& TCP_Connection::GetSocket(void)
 void TCP_Connection::Start(void)
 {
     this->incomingMessage.clear();
-    async_read_until(this->socketServer, dynamic_buffer(this->incomingMessage), '\n',boost::bind(&TCP_Connection::handle_read, this,
-                                                                                                 boost::asio::placeholders::error,
-                                                                                                 boost::asio::placeholders::bytes_transferred) );
-    this->DoLogin();
+    async_read_until(this->socketServer, dynamic_buffer(this->incomingMessage), '\n',
+                     bind(&TCP_Connection::HandleReadFile, shared_from_this(),
+                          placeholders::error, placeholders::bytes_transferred));
+    //Temporarily moved to HandleReadFile
+    //this->DoLogin();
 }
 #pragma endregion
 
@@ -52,6 +53,7 @@ void TCP_Connection::Disconnect(void)
 
 void TCP_Connection::DoLogin(void)
 {
+    std::cout << "[DEBUG] Start login" << std::endl;
     const string loginRequestMsg = "AUTH REQUEST";
     this->outgoingMessage = loginRequestMsg;
     // When initiating the asynchronous operation, and if using boost::bind(),
@@ -142,15 +144,20 @@ void TCP_Connection::HandleLoginRead(const boost::system::error_code& error, siz
     //std::cout << "[DEBUG] Read operation completed; transferred " << bytes_transferred << "bytes" << std::endl;
 }
 
-void TCP_Connection::handle_read(const boost::system::error_code& error, size_t bytes_transferred)
+void TCP_Connection::HandleReadFile(const boost::system::error_code& error, size_t bytes_transferred)
 {
     std::ofstream ofs;
     ofs.open("txtServer.txt", std::ios::app);
-    if(ofs.is_open()){
+    if(ofs.is_open())
+    {
         /*std::cout << this->incomingMessage << std::endl;*/
         ofs<<this->incomingMessage;
     }
     ofs.close();
+    std::cout << "[DEBUG] End of file transfer" << std::endl;
+
+    //It must be moved into TCP_Server::Start because client authentication must be first operation.
+    this->DoLogin();
 }
 
 #pragma endregion
