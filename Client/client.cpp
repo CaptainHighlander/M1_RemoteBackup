@@ -1,5 +1,4 @@
 #include "client.h"
-#include "FileSystemWatcher/file_system_watcher.h"
 #include <iostream>
 #include <boost/asio.hpp>
 #include <fstream>
@@ -29,6 +28,7 @@ void Client::Run(void)
 
     try
     {
+        /*
         int length = 2048;
         char* line = new char [length];
         std::ifstream ifs("txtClient.txt");
@@ -41,7 +41,8 @@ void Client::Run(void)
             }
             ifs.close();
         }
-
+        delete[] line;
+        */
         string reply, response;
         while (true)
         {
@@ -64,8 +65,10 @@ void Client::Run(void)
             {
                 cout << "Successful login" << endl;
                 //Maybe it should be created in a different thread.
-                FileSystemWatcher fsw { "../FoldersTest/Riccardo", true };
-
+                FileSystemWatcher fsw { "./FoldersTest/Riccardo" };
+                const std::function<void(const std::string&, FileSystemWatcher::FileStatus)> fswActionFunc = std::bind(&Client::NotifyFileChange, this, std::placeholders::_1, std::placeholders::_2);
+                fsw.StartWatch(fswActionFunc);
+                cout << "Spero di vedere questa scritta, prossimamente..." << endl;
             }
             else if (response == "ACCESS DENIED")
             {
@@ -90,8 +93,28 @@ void Client::Run(void)
     }
     catch (std::exception& e)
     {
-        std::cerr << e.what() << std::endl;
+        std::cerr << "Exception\n\t" << e.what() << endl;
     }
+}
+
+void Client::NotifyFileChange(const string& path, const FileSystemWatcher::FileStatus fs)
+{
+    string debugStr;
+    switch(fs)
+    {
+        case FileSystemWatcher::FileStatus::FS_Created:
+            debugStr = "Creato";
+            break;
+        case FileSystemWatcher::FileStatus::FS_Modified:
+            debugStr = "Modificato";
+            break;
+        case FileSystemWatcher::FileStatus::FS_Erased:
+            debugStr = "Cancellato";
+            break;
+        default:
+            return;
+    }
+    cout << "[DEBUG] Client::NotifyFileChange --> path = " << path << "\n\tStatus =" << debugStr <<  endl;
 }
 #pragma endregion
 

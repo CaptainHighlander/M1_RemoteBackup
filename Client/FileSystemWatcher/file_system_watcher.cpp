@@ -1,12 +1,13 @@
 #include "file_system_watcher.h"
+
 #include <iostream> //Tmp for debug
 #include <iomanip>
 #include <openssl/sha.h>
 #include <boost/iostreams/device/mapped_file.hpp>
 
 #pragma region Constructor:
-FileSystemWatcher::FileSystemWatcher(const string& _pathToWatch, const bool _bWatching)
-    : pathToWatch(_pathToWatch), bWatching(_bWatching)
+FileSystemWatcher::FileSystemWatcher(const string& _pathToWatch)
+    : pathToWatch(_pathToWatch), bWatching(false)
 {
     //Store information about path (only regular files or folders) that are already in the monitored folder
     this->CheckForCreatedOrModifiedPath(nullptr);
@@ -14,28 +15,42 @@ FileSystemWatcher::FileSystemWatcher(const string& _pathToWatch, const bool _bWa
 #pragma endregion
 
 #pragma region Public members:
-void FileSystemWatcher::StartWatch(void)
+void FileSystemWatcher::StartWatch(const std::function<void (const string&, const FileStatus)> &action)
 {
+    //File system watching is already monitoring, so retuen from current function.
+    if (this->bWatching == true)
+        return;
+
     this->bWatching = true;
+    //Create a new thread and its associated ThreadGuard.
+    this->watchingThread.push_back(std::thread(&FileSystemWatcher::Watching, this, action));
+    this->watchingThreadGuard.push_back(ThreadGuard{this->watchingThread.front()});
+    this->watchingThread.front().detach();
 }
 
 void FileSystemWatcher::StopWatch(void)
 {
+    //File system watching isn't monitoring, so return from current function.
+    if (this->bWatching == false)
+        return;
+
     this->bWatching = false;
 }
+#pragma endregion
 
-void FileSystemWatcher::Watching(const std::function<void (string, FileStatus)> &actionFunct)
+#pragma region Private members:
+void FileSystemWatcher::Watching(const std::function<void (const string&, const FileStatus)> &actionFunct)
 {
+    std::cout << "[DEBUG] Start watching" << std::endl;
     while (this->bWatching == true)
     {
         this->CheckForDeletedPath(actionFunct);
         this->CheckForCreatedOrModifiedPath(actionFunct);
     }
+    std::cout << "[DEBUG] Stop watching" << std::endl;
 }
-#pragma endregion
 
-#pragma region Private members:
-void FileSystemWatcher::CheckForDeletedPath(const std::function<void(string, FileStatus)>& actionFunct)
+void FileSystemWatcher::CheckForDeletedPath(const std::function<void(const string&, const FileStatus)>& actionFunct)
 {
     //Iterates over all monitored path
     auto path_it = this->monitoredFiles.begin();
@@ -51,7 +66,7 @@ void FileSystemWatcher::CheckForDeletedPath(const std::function<void(string, Fil
     }
 }
 
-void FileSystemWatcher::CheckForCreatedOrModifiedPath(const std::function<void(string, FileStatus)>& actionFunct)
+void FileSystemWatcher::CheckForCreatedOrModifiedPath(const std::function<void(const string&, const FileStatus)>& actionFunct)
 {
     for (auto &path_iterator : fs::recursive_directory_iterator(this->pathToWatch))
     {

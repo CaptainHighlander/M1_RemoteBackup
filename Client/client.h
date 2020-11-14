@@ -1,5 +1,7 @@
 #pragma once
 
+#include "FileSystemWatcher/file_system_watcher.h"
+
 #include <boost/asio.hpp>
 #include <string>
 
@@ -18,6 +20,7 @@ public:
 
     #pragma region Public members:
     void Run(void);
+    void NotifyFileChange(const std::string& path, const FileSystemWatcher::FileStatus);
     #pragma endregion
 private:
     string address;

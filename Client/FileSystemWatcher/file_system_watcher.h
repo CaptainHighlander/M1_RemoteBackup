@@ -1,12 +1,16 @@
 #pragma once
 
+#include "../ThreadGuard/thread_guard.hpp"
+
 #include <experimental/filesystem>
 #include <functional>
 #include <string>
 #include <unordered_map>
+#include <list>
 
 using std::string;
 using std::unordered_map;
+using std::list;
 namespace fs = std::experimental::filesystem;
 
 class FileSystemWatcher
@@ -14,11 +18,16 @@ class FileSystemWatcher
 public:
     enum class FileStatus { FS_Created, FS_Modified, FS_Erased };
 
-    FileSystemWatcher(const string& _pathToWatch, const bool _bWatching);
+    #pragma region Constructors:
+    explicit FileSystemWatcher(const string& _pathToWatch);
+    FileSystemWatcher(FileSystemWatcher const& other) = delete;
+    FileSystemWatcher& operator=(FileSystemWatcher const& other) = delete;
+    #pragma endregion
 
-    void StartWatch(void);
+    #pragma region Public members:
+    void StartWatch(const std::function<void (const string&, const FileStatus)> &action);
     void StopWatch(void);
-    void Watching(const std::function<void (std::string, FileStatus)> &action);
+    #pragma endregion
 private:
     struct FileInfo_s
     {
@@ -32,7 +41,18 @@ private:
     string pathToWatch;
     unordered_map<string, FileInfo_s> monitoredFiles;
 
-    void CheckForDeletedPath(const std::function<void (string, FileStatus)> &action);
-    void CheckForCreatedOrModifiedPath(const std::function<void (string, FileStatus)> &action);
+    //Each of two lists contain only an element.
+    //We are using list in order to don't create a thread and a ThreadGuard before the time.
+    //Indeed, if we hadn't used a list, the thread and the ThreadGuard would be instantiated during the creation
+    // of a FileSystemWatcher object.
+    list<std::thread> watchingThread;
+    list<ThreadGuard> watchingThreadGuard;
+
+    #pragma region Private members:
+    void Watching(const std::function<void (const string&, const FileStatus)> &action);
+    void CheckForDeletedPath(const std::function<void (const string&, const FileStatus)> &action);
+    void CheckForCreatedOrModifiedPath(const std::function<void (const string&, const FileStatus)> &action);
     [[nodiscard]] static string DigestFromFile(const string& path);
+
+    #pragma endregion
 };

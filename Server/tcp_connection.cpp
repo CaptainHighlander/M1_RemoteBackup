@@ -32,12 +32,13 @@ tcp::socket& TCP_Connection::GetSocket(void)
 
 void TCP_Connection::Start(void)
 {
+    /*
     this->incomingMessage.clear();
     async_read_until(this->socketServer, dynamic_buffer(this->incomingMessage), '\n',
                      bind(&TCP_Connection::HandleReadFile, shared_from_this(),
                           placeholders::error, placeholders::bytes_transferred));
-    //Temporarily moved to HandleReadFile
-    //this->DoLogin();
+    */
+    this->DoLogin();
 }
 #pragma endregion
 
@@ -155,9 +156,6 @@ void TCP_Connection::HandleReadFile(const boost::system::error_code& error, size
     }
     ofs.close();
     std::cout << "[DEBUG] End of file transfer" << std::endl;
-
-    //It must be moved into TCP_Server::Start because client authentication must be first operation.
-    this->DoLogin();
 }
 
 #pragma endregion
