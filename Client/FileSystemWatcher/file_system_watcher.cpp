@@ -5,12 +5,19 @@
 #include <openssl/sha.h>
 #include <boost/iostreams/device/mapped_file.hpp>
 
-#pragma region Constructor:
+#pragma region Constructors and destructor:
 FileSystemWatcher::FileSystemWatcher(const string& _pathToWatch)
     : pathToWatch(_pathToWatch), bWatching(false)
 {
     //Store information about path (only regular files or folders) that are already in the monitored folder
     this->CheckForCreatedOrModifiedPath(nullptr);
+}
+
+FileSystemWatcher::~FileSystemWatcher(void)
+{
+    std::cout << "[DEBUG] Destructor FileSystemWatcher" << std::endl;
+    //If monitoring was previously started, it will stop concurrent thread.
+    this->StopWatch();
 }
 #pragma endregion
 
@@ -22,15 +29,16 @@ void FileSystemWatcher::StartWatch(const std::function<void (const string&, cons
         return;
 
     this->bWatching = true;
-    //Create a new thread and its associated ThreadGuard.
+    //Create a new thread and it's associated to a ThreadGuard to guarantee RAII idiom.
+    //Monitoring will be runned asynchronously, in an other thread.
     this->watchingThread.push_back(std::thread(&FileSystemWatcher::Watching, this, action));
-    this->watchingThreadGuard.push_back(ThreadGuard{this->watchingThread.front()});
-    this->watchingThread.front().detach();
+    this->watchingThread.back().detach();
+    this->watchingThreadGuard.push_back(ThreadGuard{this->watchingThread.back()});
 }
 
 void FileSystemWatcher::StopWatch(void)
 {
-    //File system watching isn't monitoring, so return from current function.
+    //File system watcher isn't monitoring, so return from current function.
     if (this->bWatching == false)
         return;
 
@@ -44,8 +52,19 @@ void FileSystemWatcher::Watching(const std::function<void (const string&, const 
     std::cout << "[DEBUG] Start watching" << std::endl;
     while (this->bWatching == true)
     {
-        this->CheckForDeletedPath(actionFunct);
-        this->CheckForCreatedOrModifiedPath(actionFunct);
+        try
+        {
+            this->CheckForDeletedPath(actionFunct);
+            this->CheckForCreatedOrModifiedPath(actionFunct);
+        }
+        catch (const std::exception& e)
+        {
+            //TO TO: Notificare al thread principale che c'è stato un problema nel monitor.
+
+            this->bWatching = false;
+            std::cerr << "Exception FSW\n\t" << e.what() << std::endl;
+            throw e;
+        }
     }
     std::cout << "[DEBUG] Stop watching" << std::endl;
 }
@@ -116,6 +135,7 @@ string FileSystemWatcher::DigestFromFile(const string& path)
 
     //Computation of the digest
     unsigned char digest[SHA512_DIGEST_LENGTH];
+    //TO DO: Rivedere meglio questa parte. Puo' lanciare eccezioni se il file è vuoto.
     boost::iostreams::mapped_file_source src { path };
     SHA512((unsigned char*)src.data(), src.size(), digest);
 

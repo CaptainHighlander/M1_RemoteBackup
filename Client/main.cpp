@@ -7,5 +7,5 @@ int main()
     //Run a new client and wait for its termination
     client.Run();
 
-    return 0;
+    return EXIT_SUCCESS;
 }

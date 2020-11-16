@@ -18,10 +18,13 @@ class FileSystemWatcher
 public:
     enum class FileStatus { FS_Created, FS_Modified, FS_Erased };
 
-    #pragma region Constructors:
+    #pragma region Constructors and destructor:
     explicit FileSystemWatcher(const string& _pathToWatch);
-    FileSystemWatcher(FileSystemWatcher const& other) = delete;
+    //We don't allow operator= because it's unnecessary.
+    //On the other hand, we need CopyConstructor since to create a thread inside the class.
+    //For now, we use automatic CopyConstructor, since it seems we don't need to overwrite it.
     FileSystemWatcher& operator=(FileSystemWatcher const& other) = delete;
+    ~FileSystemWatcher(void);
     #pragma endregion
 
     #pragma region Public members:

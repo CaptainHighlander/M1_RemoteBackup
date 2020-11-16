@@ -25,9 +25,16 @@ public:
 private:
     string address;
     uint16_t port;
+    bool bIsAuthenticated;
+    string mexToSend;
+    string receivedMex;
 
     #pragma region Private static members:
     [[nodiscard]] static string GetData(tcp::socket& socket);
     static void SendData(tcp::socket& socket, const string& message);
+    #pragma endregion
+
+    #pragma region Provate members:
+    void DoLogin(ip::tcp::socket& client_socket);
     #pragma endregion
 };

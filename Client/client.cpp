@@ -12,7 +12,7 @@ using std::endl;
 
 #pragma region Constructor:
 Client::Client(const string& _address, const uint16_t _port)
-    : address(_address), port(_port)
+    : address(_address), port(_port), bIsAuthenticated(false)
 {
 }
 #pragma endregion
@@ -43,53 +43,18 @@ void Client::Run(void)
         }
         delete[] line;
         */
-        string reply, response;
-        while (true)
+        this->DoLogin(client_socket);
+        if (this->bIsAuthenticated == false)
+            return; //User isn't logged: client will not be able to continue it'execution. So, it's stopped.
+
+        FileSystemWatcher fsw { "./FoldersTest/Riccardo" };
+        const std::function<void(const std::string&, FileSystemWatcher::FileStatus)> fswActionFunc = std::bind(&Client::NotifyFileChange, this, std::placeholders::_1, std::placeholders::_2);
+        fsw.StartWatch(fswActionFunc);
+        do
         {
-            // Fetching response
-            response = Client::GetData(client_socket);
-
-            // Popping last character "\n"
-            response.pop_back();
-
-            cout << "[DEBUG] " << response << endl;
-            if (response == "AUTH REQUEST")
-            {
-                cout << "Insert username and password" << endl;
-            }
-            else if (response == "AUTH REQUEST RETRY")
-            {
-                cout << "Incorrect credentials. Please, try again" << endl;
-            }
-            else if (response == "AUTHENTICATED")
-            {
-                cout << "Successful login" << endl;
-                //Maybe it should be created in a different thread.
-                FileSystemWatcher fsw { "./FoldersTest/Riccardo" };
-                const std::function<void(const std::string&, FileSystemWatcher::FileStatus)> fswActionFunc = std::bind(&Client::NotifyFileChange, this, std::placeholders::_1, std::placeholders::_2);
-                fsw.StartWatch(fswActionFunc);
-                cout << "Spero di vedere questa scritta, prossimamente..." << endl;
-            }
-            else if (response == "ACCESS DENIED")
-            {
-                cout << "Access denied" << endl;
-                break;
-            }
-
-            // Validating if the connection has to be closed
-            if (response == "exit")
-            {
-                cout << "Connection terminated" << endl;
-                break;
-            }
-
-            // Reading new message from input stream
-            getline(cin, reply);
-            Client::SendData(client_socket, reply);
-
-            if (reply == "exit")
-                break;
+            ;
         }
+        while(this->receivedMex != "EXIT" && this->mexToSend != "EXIT");
     }
     catch (std::exception& e)
     {
@@ -124,11 +89,54 @@ string Client::GetData(tcp::socket& socket)
     boost::asio::streambuf buf;
     read_until(socket, buf, '\n');
     string data = buffer_cast<const char*>(buf.data());
+    data.pop_back();
     return data;
 }
 
 void Client::SendData(tcp::socket& socket, const string& message)
 {
     write(socket, buffer(message + "\n"));
+}
+#pragma
+
+#pragma Private members:
+void Client::DoLogin(ip::tcp::socket& client_socket)
+{
+    bool bFirstContinuationCondition;
+    do
+    {
+        this->bIsAuthenticated = false;
+
+        //Fetching a mex from the server.
+        this->receivedMex = Client::GetData(client_socket);
+        cout << "[DEBUG] Received message: " << this->receivedMex << endl;
+
+        if (this->receivedMex == "AUTH REQUEST")
+            cout << "Insert username and password" << endl;
+        else if (this->receivedMex == "AUTH REQUEST RETRY")
+            cout << "Incorrect credentials. Please, try again" << endl;
+        else if (this->receivedMex == "ACCESS DENIED")
+            cout << "Access denied!" << endl;
+        else if (this->receivedMex == "AUTHENTICATED")
+        {
+            cout << "Successful login" << endl;
+            this->bIsAuthenticated = true;
+        }
+
+        bFirstContinuationCondition = this->receivedMex != "EXIT" && this->receivedMex != "ACCESS DENIED" && this->bIsAuthenticated == false;
+        if (bFirstContinuationCondition)
+        {
+            //Reading new message from input stream
+            getline(cin, this->mexToSend);
+            //Send mex to server
+            Client::SendData(client_socket, this->mexToSend);
+        }
+        else if (this->bIsAuthenticated == false)
+            cout << "Connection terminated" << endl;
+    }   while (bFirstContinuationCondition && this->mexToSend != "EXIT" );
+
+    //Reset message.
+    this->mexToSend = "";
+    this->receivedMex = "";
 }
 #pragma endregion
