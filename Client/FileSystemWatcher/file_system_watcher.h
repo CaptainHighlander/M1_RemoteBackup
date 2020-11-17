@@ -53,6 +53,7 @@ private:
 
     #pragma region Private members:
     void Watching(const std::function<void (const string&, const FileStatus)> &action);
+    void CheckForSomething(const bool bCheckAlsoDeletedPath, const std::function<void (const string&, const FileStatus)> &actionFunct);
     void CheckForDeletedPath(const std::function<void (const string&, const FileStatus)> &action);
     void CheckForCreatedOrModifiedPath(const std::function<void (const string&, const FileStatus)> &action);
     [[nodiscard]] static string DigestFromFile(const string& path);

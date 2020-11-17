@@ -10,7 +10,7 @@ FileSystemWatcher::FileSystemWatcher(const string& _pathToWatch)
     : pathToWatch(_pathToWatch), bWatching(false)
 {
     //Store information about path (only regular files or folders) that are already in the monitored folder
-    this->CheckForCreatedOrModifiedPath(nullptr);
+    this->CheckForSomething(false, nullptr);
 }
 
 FileSystemWatcher::~FileSystemWatcher(void)
@@ -24,7 +24,7 @@ FileSystemWatcher::~FileSystemWatcher(void)
 #pragma region Public members:
 void FileSystemWatcher::StartWatch(const std::function<void (const string&, const FileStatus)> &action)
 {
-    //File system watching is already monitoring, so retuen from current function.
+    //File system watching is already monitoring, so return from current function.
     if (this->bWatching == true)
         return;
 
@@ -52,21 +52,57 @@ void FileSystemWatcher::Watching(const std::function<void (const string&, const 
     std::cout << "[DEBUG] Start watching" << std::endl;
     while (this->bWatching == true)
     {
-        try
-        {
-            this->CheckForDeletedPath(actionFunct);
-            this->CheckForCreatedOrModifiedPath(actionFunct);
-        }
-        catch (const std::exception& e)
-        {
-            //TO TO: Notificare al thread principale che c'è stato un problema nel monitor.
-
-            this->bWatching = false;
-            std::cerr << "Exception FSW\n\t" << e.what() << std::endl;
-            throw e;
-        }
+        this->CheckForSomething(true, actionFunct);
     }
     std::cout << "[DEBUG] Stop watching" << std::endl;
+}
+
+void FileSystemWatcher::CheckForSomething(const bool bCheckAlsoDeletedPath, const std::function<void (const string&, const FileStatus)> &actionFunct)
+{
+    /*
+     * Exception handling: how it's done
+     * During monitoring, it's possible that some folder/file is deleted during the execution of some istruction
+     * following a existence check.
+     * It can throw some exception during the execution of some instructions like, for instance, last_write_time,
+     * or during the computation of the digest.
+     * These exceptions will be ignored, because everything will be solved by the next run of CheckForDeletedPath.
+     * However, if the deleted folder is the one to monitor, the exeception will not be ignored, file system watcher
+     * will be stopped and a notification will be sent. The same behavior will be produced by other types of exceptions.
+     */
+    try
+    {
+        if (bCheckAlsoDeletedPath == true)
+            this->CheckForDeletedPath(actionFunct);
+        this->CheckForCreatedOrModifiedPath(actionFunct);
+    }
+    catch (const fs::filesystem_error& fsException)
+    {
+        //Consider the exception
+        if (fsException.path1() == this->pathToWatch)
+        {
+            //TO TO: Notificare al thread principale che c'è stato un problema con quella che era la cartella da monitorare.
+            //Probabilmente è stata cancellata completamente oppure ha cambiato nome.
+
+            this->bWatching = false;
+            std::cerr << "The path to be monitored wasn't found" << std::endl;
+            throw std::exception();
+        }
+        //Ignore the exception
+        ;
+    }
+    catch (const boost::exception& boostException)
+    {
+        //Ignore the exception
+        ;
+    }
+    catch (const std::exception& e)
+    {
+        //TO DO: Notificare al thread principale che c'è stato un altro tipo di problema nel monitor.
+
+        this->bWatching = false;
+        std::cerr << "Exception FSW\n\t" << e.what() << std::endl;
+        throw e;
+    }
 }
 
 void FileSystemWatcher::CheckForDeletedPath(const std::function<void(const string&, const FileStatus)>& actionFunct)
@@ -116,7 +152,7 @@ void FileSystemWatcher::CheckForCreatedOrModifiedPath(const std::function<void(c
             {
                 actionFunct(pathName, FileStatus::FS_Created);
             }
-            //Modified file
+                //Modified file
             else if (this->monitoredFiles.at(pathName).fileTimeType != sFI.fileTimeType)
             {
                 actionFunct(pathName, FileStatus::FS_Modified);
@@ -133,18 +169,32 @@ string FileSystemWatcher::DigestFromFile(const string& path)
     if (fs::is_regular_file(path) == false)
         return "";
 
-    //Computation of the digest
+    //Digest can't be calculated on an empty file. So, an empty string will be returned.
+    if (fs::is_empty(path) == true)
+        return "";
+
+    /* Computation of the digest */
     unsigned char digest[SHA512_DIGEST_LENGTH];
-    //TO DO: Rivedere meglio questa parte. Puo' lanciare eccezioni se il file è vuoto.
-    boost::iostreams::mapped_file_source src { path };
-    SHA512((unsigned char*)src.data(), src.size(), digest);
+    //First of all, we try to access to the memory-mapped file.
+    //(The advantage of memory mapping a file is increasing I/O performance, especially when used on big files).
+    //If it has been correctly opened, we compute digest using the strong algorithm SHA512.
+    //Finally, we convert computed digest to a string.
+    boost::iostreams::mapped_file_source mfs;
+    mfs.open(path, boost::iostreams::mapped_file_source::readwrite);
+    if (mfs.is_open() == true)
+    {
+        SHA512((unsigned char*) mfs.data(), mfs.size(), digest);
+        mfs.close();
 
-    //Conversion of the digest to a string
-    std::ostringstream digestOStr;
-    digestOStr << std::hex << std::setfill('0');
-    for (auto& c: digest)
-        digestOStr << std::setw(2) <<(int)c;
+        //Conversion of the digest to a string
+        std::ostringstream digestOStr;
+        digestOStr << std::hex << std::setfill('0');
+        for (auto& c: digest)
+            digestOStr << std::setw(2) << (int) c;
 
-    return digestOStr.str();
+        return digestOStr.str();
+    }
+
+    return "";
 }
 #pragma endregion
