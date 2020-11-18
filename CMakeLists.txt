@@ -34,12 +34,12 @@ add_executable(
 )
 
 # Use of C++20
-target_compile_features(RemoteBackupClient PUBLIC cxx_std_20)
-target_compile_features(RemoteBackupServer PUBLIC cxx_std_20)
-if (MSVC)
-    target_compile_options(RemoteBackupClient PUBLIC "/Zc:__cplusplus")
-    target_compile_options(RemoteBackupServer PUBLIC "/Zc:__cplusplus")
-endif()
+#target_compile_features(RemoteBackupClient PUBLIC cxx_std_20)
+#target_compile_features(RemoteBackupServer PUBLIC cxx_std_20)
+#if (MSVC)
+    #target_compile_options(RemoteBackupClient PUBLIC "/Zc:__cplusplus")
+    #target_compile_options(RemoteBackupServer PUBLIC "/Zc:__cplusplus")
+#endif()
 
 # Links some external libraries used by the client module
 target_link_libraries(RemoteBackupClient pthread)

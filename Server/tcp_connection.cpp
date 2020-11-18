@@ -149,7 +149,7 @@ void TCP_Connection::HandleReadFile(const boost::system::error_code& error, size
 {
     std::ofstream ofs;
     ofs.open("txtServer.txt", std::ios::app);
-    if(ofs.is_open())
+    if (ofs.is_open())
     {
         /*std::cout << this->incomingMessage << std::endl;*/
         ofs<<this->incomingMessage;

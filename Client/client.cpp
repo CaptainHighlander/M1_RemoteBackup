@@ -54,7 +54,7 @@ void Client::Run(void)
         {
             ;
         }
-        while(this->receivedMex != "EXIT" && this->mexToSend != "EXIT");
+        while (this->receivedMex != "EXIT" && this->mexToSend != "EXIT");
     }
     catch (std::exception& e)
     {

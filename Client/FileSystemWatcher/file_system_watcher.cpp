@@ -3,6 +3,7 @@
 #include <iostream> //Tmp for debug
 #include <iomanip>
 #include <openssl/sha.h>
+#include <boost/algorithm/string.hpp>
 #include <boost/iostreams/device/mapped_file.hpp>
 
 #pragma region Constructors and destructor:
@@ -126,6 +127,8 @@ void FileSystemWatcher::CheckForCreatedOrModifiedPath(const std::function<void(c
     for (auto &path_iterator : fs::recursive_directory_iterator(this->pathToWatch))
     {
         const std::string pathName = path_iterator.path().string();
+        if (boost::algorithm::contains(pathName, "goutputstream") == true)
+            continue;
         FileInfo_s sFI;
 
         //Check if the current path is a directory or a regular file
