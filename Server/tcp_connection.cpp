@@ -55,104 +55,88 @@ void TCP_Connection::Disconnect(void)
 void TCP_Connection::DoLogin(void)
 {
     std::cout << "[DEBUG] Start login" << std::endl;
-    const string loginRequestMsg = "AUTH REQUEST";
-    this->outgoingMessage = loginRequestMsg;
-    // When initiating the asynchronous operation, and if using boost::bind(),
-    // we must specify only the arguments that match the handler's parameter list.
-    // Call boost::asio::async_write() to serve the data to the client.
-    // We are using boost::asio::async_write(), rather than ip::tcp::socket::async_write_some(),
-    // to ensure that the entire block of data is sent.
-    async_write(this->socketServer, buffer(this->outgoingMessage + "\n"),
-                bind(&TCP_Connection::HandleLoginWrite, shared_from_this(),
-                     placeholders::error, placeholders::bytes_transferred));
-}
 
-void TCP_Connection::HandleLoginWrite(const boost::system::error_code& error, size_t bytes_transferred)
-{
-    //std::cout << "[DEBUG] Write operation completed; transferred " << bytes_transferred << "bytes" << std::endl;
-    //Ask for login credentials (max MAX_NUMBER_OF_FAILED_LOGINS of fails)
-    if (this->associatedUserID.empty() == true && this->failedLoginAttempts <= this->MAX_NUMBER_OF_FAILED_LOGINS)
+    this->outgoingMessage = "AUTH REQUEST";
+    write(this->socketServer, buffer(this->outgoingMessage + "\n"));
+
+    while (this->associatedUserID.empty() == true && this->failedLoginAttempts <= this->MAX_NUMBER_OF_FAILED_LOGINS)
     {
         //Clear previous incoming message.
         this->incomingMessage.clear();
-
-        //Wait for reading of username and password
-        async_read_until(this->socketServer, dynamic_buffer(this->incomingMessage), '\n',
-                         bind(&TCP_Connection::HandleLoginRead, shared_from_this(),
-                              placeholders::error, placeholders::bytes_transferred));
-    }
-}
-
-void TCP_Connection::HandleLoginRead(const boost::system::error_code& error, size_t bytes_transferred)
-{
-    if (this->associatedUserID.empty() == true)
-    {
+        read_until(this->socketServer, dynamic_buffer(this->incomingMessage), '\n');
         // Popping last character "\n"
         this->incomingMessage.pop_back();
 
-        //Try to get username and password provided from the client.
-        size_t pos = this->incomingMessage.find_first_of(' ');
-        if (pos != string::npos) //User has provided an username and a password.
+        //Verify provided credentials and provide a response to the client:
+        if (this->CheckLoginCredentials() == true)
         {
-            /**** Authentication in progress... ****/
+            this->outgoingMessage = "AUTHENTICATED";
+        }
+        else
+        {
+            this->failedLoginAttempts += 1;
+            this->outgoingMessage = (this->failedLoginAttempts <= this->MAX_NUMBER_OF_FAILED_LOGINS) ? "AUTH REQUEST RETRY" : "ACCESS DENIED";
+        }
+        write(this->socketServer, buffer(this->outgoingMessage + "\n"));
+    }
+}
 
-            const string username = this->incomingMessage.substr(0, pos);
-            string userPassword = this->incomingMessage.substr(pos + 1);
+bool TCP_Connection::CheckLoginCredentials(void)
+{
+    if (this->associatedUserID.empty() == false)
+        return false;
 
-            //Try to get user's information from database.
-            pair<bool, Dao::UserInfo> userInfomation = Dao::GetUserInfo(username);
+    //Try to get username and password provided from the client.
+    size_t pos = this->incomingMessage.find_first_of(' ');
+    if (pos != string::npos) //User has provided an username and a password.
+    {
+        /**** Authentication in progress... ****/
 
-            if (userInfomation.first == true && username == userInfomation.second.GetUserId())
+        const string username = this->incomingMessage.substr(0, pos);
+        string userPassword = this->incomingMessage.substr(pos + 1);
+
+        //Try to get user's information from database.
+        pair<bool, Dao::UserInfo> userInfomation = Dao::GetUserInfo(username);
+
+        if (userInfomation.first == true && username == userInfomation.second.GetUserId())
+        {
+            //Append salt to password.
+            const string userSalt = userInfomation.second.GetSalt();
+            userPassword.append(userSalt);
+            //Compute hash(psw || salt) using SHA512 as hash algorithm
+            unsigned char computedHashPassword[SHA512_DIGEST_LENGTH];
+            SHA512(reinterpret_cast<const unsigned char*>(userPassword.c_str()), userPassword.size(), computedHashPassword);
+
+            //Hash converted to string
+            std::ostringstream ossComputedHashPasswordStr;
+            for (uint32_t i = 0; i < SHA512_DIGEST_LENGTH; ++i)
             {
-                //Append salt to password.
-                const string userSalt = userInfomation.second.GetSalt();
-                userPassword.append(userSalt);
-                //Compute hash(psw || salt) using SHA512 as hash algorithm
-                unsigned char computedHashPassword[SHA512_DIGEST_LENGTH];
-                SHA512(reinterpret_cast<const unsigned char*>(userPassword.c_str()), userPassword.size(), computedHashPassword);
+                ossComputedHashPasswordStr << std::hex << std::setfill('0') << std::setw(2) << + computedHashPassword[i];
+            }
 
-                //Hash converted to string
-                std::ostringstream ossComputedHashPasswordStr;
-                for(uint32_t i = 0; i < SHA512_DIGEST_LENGTH; ++i)
-                {
-                    ossComputedHashPasswordStr << std::hex << std::setfill('0') << std::setw(2) << + computedHashPassword[i];
-                }
-
-                //Compare computed hash with the hash that is in the database.
-                //boost::iequals performs a case-insensitive string comparison.
-                if (boost::iequals(ossComputedHashPasswordStr.str(), userInfomation.second.GetPasswordHash()))
-                {
-                    //Username and password are valid...
-                    this->outgoingMessage = "AUTHENTICATED";
-                    this->associatedUserID = username;
-                    async_write(this->socketServer, buffer(this->outgoingMessage + "\n"),
-                                bind(&TCP_Connection::HandleLoginWrite, shared_from_this(),
-                                     placeholders::error, placeholders::bytes_transferred));
-
-                    //Successful login: don't ask again for login.
-                    return;
-                }
+            //Compare computed hash with the hash that is in the database.
+            //boost::iequals performs a case-insensitive string comparison.
+            if (boost::iequals(ossComputedHashPasswordStr.str(), userInfomation.second.GetPasswordHash()))
+            {
+                //Username and password are valid ==> Successful login: don't ask again for login.
+                this->associatedUserID = username;
+                return true;
             }
         }
-
-        //Wrong username and/or password: try again or close the connection
-        this->failedLoginAttempts += 1;
-        this->outgoingMessage = (this->failedLoginAttempts <= this->MAX_NUMBER_OF_FAILED_LOGINS) ? "AUTH REQUEST RETRY" : "ACCESS DENIED";
-        async_write(this->socketServer, buffer(this->outgoingMessage + "\n"),
-                    bind(&TCP_Connection::HandleLoginWrite, shared_from_this(),
-                         placeholders::error, placeholders::bytes_transferred));
     }
-    //std::cout << "[DEBUG] Read operation completed; transferred " << bytes_transferred << "bytes" << std::endl;
+
+    //Wrong username and/or password
+    return false;
 }
 
 void TCP_Connection::HandleReadFile(const boost::system::error_code& error, size_t bytes_transferred)
 {
     std::ofstream ofs;
     ofs.open("txtServer.txt", std::ios::app);
-    if (ofs.is_open())
+    if (ofs.is_open() == true)
     {
         /*std::cout << this->incomingMessage << std::endl;*/
-        ofs<<this->incomingMessage;
+        ofs << this->incomingMessage;
     }
     ofs.close();
     std::cout << "[DEBUG] End of file transfer" << std::endl;

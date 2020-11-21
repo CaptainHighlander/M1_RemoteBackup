@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.17)
 project(RemoteBackup)
 
+set(CMAKE_CXX_STANDARD 20)
+
 # Allow use of cpp-filesystem library
 link_libraries(-lstdc++fs)
 
