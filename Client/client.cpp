@@ -47,7 +47,7 @@ void Client::Run(void)
         if (this->bIsAuthenticated == false)
             return; //User isn't logged: client will not be able to continue it'execution. So, it's stopped.
 
-        FileSystemWatcher fsw { "./FoldersTest/Riccardo" };
+        FileSystemWatcher fsw { "./FoldersTest/Riccardo_Client" };
         const std::function<void(const std::string&, FileSystemWatcher::FileStatus)> fswActionFunc = std::bind(&Client::NotifyFileChange, this, std::placeholders::_1, std::placeholders::_2);
         fsw.StartWatch(fswActionFunc);
         do

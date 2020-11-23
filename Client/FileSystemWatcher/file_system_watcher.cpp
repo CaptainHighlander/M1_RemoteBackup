@@ -1,10 +1,7 @@
 #include "file_system_watcher.h"
-
+#include "../../Common/Utils/utils.h"
 #include <iostream> //Tmp for debug
-#include <iomanip>
-#include <openssl/sha.h>
 #include <boost/algorithm/string.hpp>
-#include <boost/iostreams/device/mapped_file.hpp>
 
 #pragma region Constructors and destructor:
 FileSystemWatcher::FileSystemWatcher(const string& _pathToWatch)
@@ -124,7 +121,7 @@ void FileSystemWatcher::CheckForDeletedPath(const std::function<void(const strin
 
 void FileSystemWatcher::CheckForCreatedOrModifiedPath(const std::function<void(const string&, const FileStatus)>& actionFunct)
 {
-    for (auto &path_iterator : fs::recursive_directory_iterator(this->pathToWatch))
+    for (auto& path_iterator : fs::recursive_directory_iterator(this->pathToWatch))
     {
         const std::string pathName = path_iterator.path().string();
         if (boost::algorithm::contains(pathName, "goutputstream") == true)
@@ -132,15 +129,15 @@ void FileSystemWatcher::CheckForCreatedOrModifiedPath(const std::function<void(c
         FileInfo_s sFI;
 
         //Check if the current path is a directory or a regular file
-        if (fs::is_directory(path_iterator) == true)
+        if (fs::is_directory(path_iterator.path()) == true)
             sFI.bIsFolder = true;
-        else if (fs::is_regular_file(path_iterator) == true)
+        else if (fs::is_regular_file(path_iterator.path()) == true)
             sFI.bIsRegularFile = true;
         else
             continue;
 
         //Compute digest of the file. Folder will always have empty digest.
-        sFI.digest = FileSystemWatcher::DigestFromFile(pathName);
+        sFI.digest = utils::DigestFromFile(pathName);
         //std::cout << "[DEBUG] " << pathName << " has digest:\n\t" << sFI.digest << std::endl;
 
         //Check when file has been updated last time.
@@ -164,40 +161,5 @@ void FileSystemWatcher::CheckForCreatedOrModifiedPath(const std::function<void(c
         //Update information about file.
         this->monitoredFiles[pathName] = sFI;
     }
-}
-
-string FileSystemWatcher::DigestFromFile(const string& path)
-{
-    //Folders have always an empty digest.
-    if (fs::is_regular_file(path) == false)
-        return "";
-
-    //Digest can't be calculated on an empty file. So, an empty string will be returned.
-    if (fs::is_empty(path) == true)
-        return "";
-
-    /* Computation of the digest */
-    unsigned char digest[SHA512_DIGEST_LENGTH];
-    //First of all, we try to access to the memory-mapped file.
-    //(The advantage of memory mapping a file is increasing I/O performance, especially when used on big files).
-    //If it has been correctly opened, we compute digest using the strong algorithm SHA512.
-    //Finally, we convert computed digest to a string.
-    boost::iostreams::mapped_file_source mfs;
-    mfs.open(path, boost::iostreams::mapped_file_source::readwrite);
-    if (mfs.is_open() == true)
-    {
-        SHA512((unsigned char*) mfs.data(), mfs.size(), digest);
-        mfs.close();
-
-        //Conversion of the digest to a string
-        std::ostringstream digestOStr;
-        digestOStr << std::hex << std::setfill('0');
-        for (auto& c: digest)
-            digestOStr << std::setw(2) << (int) c;
-
-        return digestOStr.str();
-    }
-
-    return "";
 }
 #pragma endregion

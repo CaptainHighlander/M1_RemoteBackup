@@ -15,26 +15,24 @@ class TCP_Connection : public boost::enable_shared_from_this<TCP_Connection>
 {
 public:
     typedef boost::shared_ptr<TCP_Connection> pointer;
-    //TCP_Connection(TCP_Connection const&) = delete;
-    //TCP_Connection& operator=(TCP_Connection const&) = delete;
+    TCP_Connection(TCP_Connection const&) = delete;
+    TCP_Connection& operator=(TCP_Connection const&) = delete;
     ~TCP_Connection(void);
 
     static pointer Create(boost::asio::io_context& io_context);
-
     [[nodiscard]] tcp::socket& GetSocket(void);
-
     void Start(void);
 private:
     explicit TCP_Connection(boost::asio::io_context& io_context);
 
     void Disconnect(void);
-
+    void ManageConnection(void);
+    void CheckSynchronization(void) const;
     void DoLogin(void);
-
     [[nodiscard]] bool CheckLoginCredentials(void);
-
     void HandleReadFile(const boost::system::error_code& error, size_t bytes_transferred);
 
+    const string USERS_PATH = "./Users/";
     tcp::socket socketServer;
     ///The data to be sent.
     string outgoingMessage;

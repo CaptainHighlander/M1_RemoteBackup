@@ -25,7 +25,8 @@ add_executable(
         ./Client/main.cpp
         ./Client/client.cpp
         ./Client/FileSystemWatcher/file_system_watcher.cpp
-        ./Client/ThreadGuard/thread_guard.hpp
+        ./Common/ThreadGuard/thread_guard.cpp
+        ./Common/Utils/utils.cpp
 )
 add_executable(
     RemoteBackupServer
@@ -33,6 +34,7 @@ add_executable(
         ./Server/tcp_connection.cpp
         ./Server/tcp_server.cpp
         ./Server/Database/DAO/dao.cpp
+        ./Common/Utils/utils.cpp
 )
 
 # Use of C++20
@@ -51,7 +53,7 @@ target_link_libraries(RemoteBackupClient ssl)
 
 # Links some external libraries used by the server module
 target_link_libraries(RemoteBackupServer pthread)
-target_link_libraries(RemoteBackupClient boost_iostreams)
+target_link_libraries(RemoteBackupServer boost_iostreams)
 target_link_libraries(RemoteBackupServer crypto)
 target_link_libraries(RemoteBackupServer ssl)
 target_link_libraries(RemoteBackupServer sqlite3)
@@ -59,5 +61,7 @@ target_link_libraries(RemoteBackupServer sqlite3)
 # Copy database from development folder to execution folder
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/Server/Database/users.db ${CMAKE_CURRENT_BINARY_DIR}/Database/users.db COPYONLY)
 
-# Copy users' folders from development folder to execution folder
+# Copy users' folders (client side) from development folder to execution folder
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/FoldersTest DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+# Copy users' folders (server side) from development folder to execution folder
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/Server/Users DESTINATION ${CMAKE_CURRENT_BINARY_DIR})

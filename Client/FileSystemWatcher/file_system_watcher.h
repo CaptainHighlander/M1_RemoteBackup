@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../ThreadGuard/thread_guard.hpp"
+#include "../../Common/ThreadGuard/thread_guard.h"
 
 #include <experimental/filesystem>
 #include <functional>
@@ -56,7 +56,5 @@ private:
     void CheckForSomething(const bool bCheckAlsoDeletedPath, const std::function<void (const string&, const FileStatus)> &actionFunct);
     void CheckForDeletedPath(const std::function<void (const string&, const FileStatus)> &action);
     void CheckForCreatedOrModifiedPath(const std::function<void (const string&, const FileStatus)> &action);
-    [[nodiscard]] static string DigestFromFile(const string& path);
-
     #pragma endregion
 };

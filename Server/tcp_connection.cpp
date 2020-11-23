@@ -1,15 +1,20 @@
 #include "tcp_connection.h"
 #include "Database/DAO/dao.h"
+#include "../Common/Utils/utils.h"
 
 #include <iostream> //TMP, only for debug.
 #include <fstream>
 #include <iomanip>
+#include <experimental/filesystem>
 #include <boost/bind.hpp>
 #include <boost/algorithm/string.hpp>
 #include <openssl/sha.h>
+#include <list>
 
+using std::list;
 using namespace DAO;
 using namespace boost::asio;
+namespace fs = std::experimental::filesystem;
 
 #pragma region Static public members:
 TCP_Connection::pointer TCP_Connection::Create(boost::asio::io_context& io_context)
@@ -38,18 +43,51 @@ void TCP_Connection::Start(void)
                      bind(&TCP_Connection::HandleReadFile, shared_from_this(),
                           placeholders::error, placeholders::bytes_transferred));
     */
-    this->DoLogin();
+    try
+    {
+        this->ManageConnection();
+    }
+    catch (const std::exception& ex)
+    {
+    }
 }
 #pragma endregion
 
 #pragma region Private members:
 TCP_Connection::TCP_Connection(boost::asio::io_context& io_context) : socketServer(io_context), failedLoginAttempts(0)
 {
+    this->associatedUserID = "";
 }
 
 void TCP_Connection::Disconnect(void)
 {
     this->socketServer.close();
+}
+
+void TCP_Connection::ManageConnection(void)
+{
+    //Try to do login.
+    this->DoLogin();
+    //A new connection has been established:
+    if (this->associatedUserID.empty() == false)
+    {
+        //Check if the folder associated to the connected user has the same files that are in the folder client-side.
+        this->CheckSynchronization();
+    }
+}
+
+void TCP_Connection::CheckSynchronization(void) const
+{
+    list<string> digestList;
+    string digestStr;
+    for (auto &path_iterator : fs::recursive_directory_iterator(USERS_PATH + this->associatedUserID))
+    {
+        //Check if the current path is a directory or a regular file
+        if (fs::is_directory(path_iterator.path()) == false && fs::is_regular_file(path_iterator.path()) == false)
+            continue;
+        digestStr = utils::DigestFromFile(path_iterator.path().string());
+        digestList.push_back(std::move(digestStr));
+    }
 }
 
 void TCP_Connection::DoLogin(void)
@@ -141,5 +179,4 @@ void TCP_Connection::HandleReadFile(const boost::system::error_code& error, size
     ofs.close();
     std::cout << "[DEBUG] End of file transfer" << std::endl;
 }
-
 #pragma endregion
