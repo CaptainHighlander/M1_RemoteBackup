@@ -109,7 +109,8 @@ void FileSystemWatcher::CheckForDeletedPath(const std::function<void(const strin
     auto path_it = this->monitoredFiles.begin();
     while (path_it != this->monitoredFiles.end())
     {
-        if (fs::exists(path_it->first) == false)
+        const string pathName = this->pathToWatch + path_it->first;
+        if (fs::exists(pathName) == false)
         {
             actionFunct(path_it->first, FileStatus::FS_Erased);
             path_it = this->monitoredFiles.erase(path_it); //Delete current element from the map and then go to the next path.
@@ -123,7 +124,7 @@ void FileSystemWatcher::CheckForCreatedOrModifiedPath(const std::function<void(c
 {
     for (auto& path_iterator : fs::recursive_directory_iterator(this->pathToWatch))
     {
-        const std::string pathName = path_iterator.path().string();
+        std::string pathName = path_iterator.path().string();
         if (boost::algorithm::contains(pathName, "goutputstream") == true)
             continue;
         FileInfo_s sFI;
@@ -143,6 +144,9 @@ void FileSystemWatcher::CheckForCreatedOrModifiedPath(const std::function<void(c
         //Check when file has been updated last time.
         sFI.fileTimeType = fs::last_write_time(path_iterator);
 
+        //Remove main path from the current path
+        utils::EraseSubStr(pathName, this->pathToWatch);
+
         //If actionFunct is a pointer to some function run this code block.
         //actionFunct should be nullptr only if FileSystemWatcher::CheckForCreatedOrModifiedPath is called by the constructor of this class.
         if (actionFunct.operator bool() == true)
@@ -152,12 +156,13 @@ void FileSystemWatcher::CheckForCreatedOrModifiedPath(const std::function<void(c
             {
                 actionFunct(pathName, FileStatus::FS_Created);
             }
-                //Modified file
+            //Modified file
             else if (this->monitoredFiles.at(pathName).fileTimeType != sFI.fileTimeType)
             {
                 actionFunct(pathName, FileStatus::FS_Modified);
             }
         }
+
         //Update information about file.
         this->monitoredFiles[pathName] = sFI;
     }

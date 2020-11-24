@@ -85,6 +85,7 @@ void TCP_Connection::CheckSynchronization(void) const
         //Check if the current path is a directory or a regular file
         if (fs::is_directory(path_iterator.path()) == false && fs::is_regular_file(path_iterator.path()) == false)
             continue;
+        //Compute current digest and store it.
         digestStr = utils::DigestFromFile(path_iterator.path().string());
         digestList.push_back(std::move(digestStr));
     }

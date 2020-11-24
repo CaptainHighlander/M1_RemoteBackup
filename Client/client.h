@@ -36,5 +36,6 @@ private:
 
     #pragma region Provate members:
     void DoLogin(ip::tcp::socket& client_socket);
+    void GetDigest();
     #pragma endregion
 };
