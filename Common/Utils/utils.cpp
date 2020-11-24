@@ -1,4 +1,6 @@
 #include "utils.h"
+#include <fstream>
+#include <iostream>
 
 #include <experimental/filesystem>
 #include <iomanip>
@@ -53,5 +55,46 @@ namespace utils
             // If found then erase it from string
             mainStr.erase(pos, toErase.length());
         }
+    }
+
+    // get length of file:
+    //ifs.seekg (0, ifs.end);
+    //int length = ifs.tellg();
+    //ifs.seekg (0, ifs.beg);
+    void SendFile(tcp::socket& socket, const string namePath)
+    {
+        if (fs::exists(namePath) == false)
+            return;
+        if (fs::is_directory(namePath) == true)
+            return;
+
+        //Get resources from SO:
+        std::ifstream ifs(namePath, std::ios::in | std::ios::binary);
+        if (ifs.is_open() == false)
+            return;
+        std::ofstream TmpSaveFile("tmp-cpp-output", std::ios::out | std::ios::binary);
+        if (TmpSaveFile.is_open() == false)
+        {
+            ifs.close();
+            return;
+        }
+        const static size_t bufferLength = 2048;
+        char* buffer = new char[bufferLength];
+
+        //Read a file
+        //TMP try to copy it
+        //TO DO: Funzione per i file di testo ma non per altri file (immagini, musicali, ecc).
+        while (ifs.eof() == false)
+        {
+            ifs.read(buffer, bufferLength);
+            string str = buffer;
+            TmpSaveFile << str;
+        }
+
+        //Close files and pay memory debt
+        TmpSaveFile.close();
+        ifs.close();
+        delete[] buffer;
+        buffer = nullptr;
     }
 }

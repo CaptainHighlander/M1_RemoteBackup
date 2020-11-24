@@ -1,7 +1,7 @@
 #include "client.h"
 #include <iostream>
 #include <boost/asio.hpp>
-#include <fstream>
+#include "../Common/Utils/utils.h"
 
 using namespace boost::asio;
 using namespace boost::asio::ip;
@@ -22,32 +22,18 @@ void Client::Run(void)
 {
     io_service io_service;
     //Socket creation
-    ip::tcp::socket client_socket(io_service);
+    this->clientSocket.push_back(ip::tcp::socket(io_service));
     //Try to connect to server
-    client_socket.connect(tcp::endpoint(address::from_string(this->address), this->port));
+    this->clientSocket.back().connect(tcp::endpoint(address::from_string(this->address), this->port));
 
     try
     {
-        /*
-        int length = 2048;
-        char* line = new char [length];
-        std::ifstream ifs("txtClient.txt");
-        if (ifs.is_open())
-        {
-            while (!ifs.eof())
-            {
-                ifs.read(line,length);
-                Client::SendData(client_socket, line);
-            }
-            ifs.close();
-        }
-        delete[] line;
-        */
-        this->DoLogin(client_socket);
+        this->DoLogin(this->clientSocket.back());
         if (this->bIsAuthenticated == false)
             return; //User isn't logged: client will not be able to continue it'execution. So, it's stopped.
 
-        FileSystemWatcher fsw { "./FoldersTest/Riccardo_Client" };
+        this->pathToWatch = "./FoldersTest/Riccardo_Client";
+        FileSystemWatcher fsw { pathToWatch };
         const std::function<void(const std::string&, FileSystemWatcher::FileStatus)> fswActionFunc = std::bind(&Client::NotifyFileChange, this, std::placeholders::_1, std::placeholders::_2);
         fsw.StartWatch(fswActionFunc);
         do
@@ -80,6 +66,7 @@ void Client::NotifyFileChange(const string& path, const FileSystemWatcher::FileS
             return;
     }
     cout << "[DEBUG] Client::NotifyFileChange --> path = " << path << "\n\tStatus =" << debugStr <<  endl;
+    utils::SendFile(this->clientSocket.back(), this->pathToWatch + path);
 }
 #pragma endregion
 
@@ -133,10 +120,16 @@ void Client::DoLogin(ip::tcp::socket& client_socket)
         }
         else if (this->bIsAuthenticated == false)
             cout << "Connection terminated" << endl;
-    }   while (bFirstContinuationCondition && this->mexToSend != "EXIT" );
+    }   while (bFirstContinuationCondition && this->mexToSend != "EXIT");
 
     //Reset message.
     this->mexToSend = "";
     this->receivedMex = "";
+}
+
+list<pair<string, string>> Client::GetDigestFromServer(void) const
+{
+    list<pair<string, string>> digestList;
+    return digestList;
 }
 #pragma endregion

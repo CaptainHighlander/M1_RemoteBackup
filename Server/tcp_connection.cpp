@@ -78,7 +78,7 @@ void TCP_Connection::ManageConnection(void)
 
 void TCP_Connection::CheckSynchronization(void) const
 {
-    list<string> digestList;
+    list<pair<string,string>> digestList;
     string digestStr;
     for (auto &path_iterator : fs::recursive_directory_iterator(USERS_PATH + this->associatedUserID))
     {
@@ -87,7 +87,7 @@ void TCP_Connection::CheckSynchronization(void) const
             continue;
         //Compute current digest and store it.
         digestStr = utils::DigestFromFile(path_iterator.path().string());
-        digestList.push_back(std::move(digestStr));
+        digestList.push_back(std::make_pair(path_iterator.path().string(), std::move(digestStr)));
     }
 }
 

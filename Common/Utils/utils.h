@@ -1,5 +1,10 @@
 #pragma once
+
 #include <string>
+#include <boost/asio.hpp>
+
+using namespace boost::asio;
+using namespace boost::asio::ip;
 using std::string;
 
 namespace utils
@@ -9,4 +14,6 @@ namespace utils
 
     //Erase first occurrence of given substring from main string.
     void EraseSubStr(string& mainStr, const string& toErase);
+
+    void SendFile(tcp::socket& socket, const string namePath);
 }

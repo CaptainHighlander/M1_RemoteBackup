@@ -8,6 +8,7 @@
 using namespace boost::asio;
 using namespace boost::asio::ip;
 using std::string;
+using std::pair;
 
 class Client
 {
@@ -28,6 +29,8 @@ private:
     bool bIsAuthenticated;
     string mexToSend;
     string receivedMex;
+    string pathToWatch;
+    std::list<ip::tcp::socket> clientSocket;
 
     #pragma region Private static members:
     [[nodiscard]] static string GetData(tcp::socket& socket);
@@ -35,7 +38,7 @@ private:
     #pragma endregion
 
     #pragma region Provate members:
-    void DoLogin(ip::tcp::socket& client_socket);
-    void GetDigest();
+    void DoLogin(tcp::socket& client_socket);
+    [[nodiscard]] list<pair<string,string>> GetDigestFromServer(void) const;
     #pragma endregion
 };
