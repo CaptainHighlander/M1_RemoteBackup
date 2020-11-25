@@ -15,5 +15,7 @@ namespace utils
     //Erase first occurrence of given substring from main string.
     void EraseSubStr(string& mainStr, const string& toErase);
 
+    [[nodiscard]] size_t GetFileSize(std::fstream& fs);
+
     void SendFile(tcp::socket& socket, const string namePath);
 }

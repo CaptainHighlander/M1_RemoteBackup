@@ -57,10 +57,18 @@ namespace utils
         }
     }
 
-    // get length of file:
-    //ifs.seekg (0, ifs.end);
-    //int length = ifs.tellg();
-    //ifs.seekg (0, ifs.beg);
+    size_t GetFileSize(std::ifstream& fs)
+    {
+        size_t length;
+        if(fs)
+        {
+            fs.seekg(0, fs.end);
+            length = fs.tellg();
+            fs.seekg(0, fs.beg);
+        }
+        return length;
+    }
+
     void SendFile(tcp::socket& socket, const string namePath)
     {
         if (fs::exists(namePath) == false)
@@ -68,33 +76,35 @@ namespace utils
         if (fs::is_directory(namePath) == true)
             return;
 
-        //Get resources from SO:
+        //Open file.
         std::ifstream ifs(namePath, std::ios::in | std::ios::binary);
         if (ifs.is_open() == false)
             return;
-        std::ofstream TmpSaveFile("tmp-cpp-output", std::ios::out | std::ios::binary);
+        std::ofstream TmpSaveFile("cpp-output", std::ios::out | std::ios::binary);
         if (TmpSaveFile.is_open() == false)
         {
             ifs.close();
             return;
         }
-        const static size_t bufferLength = 2048;
-        char* buffer = new char[bufferLength];
 
-        //Read a file
-        //TMP try to copy it
-        //TO DO: Funzione per i file di testo ma non per altri file (immagini, musicali, ecc).
-        while (ifs.eof() == false)
+        //Get file size.
+        const size_t length = utils::GetFileSize(ifs);
+        //Allocate a buffer.
+        char* buffer = new char[length + 1];
+        //Read file in block.
+        ifs.read(buffer, length);
+        if (ifs.good() == true)
         {
-            ifs.read(buffer, bufferLength);
-            string str = buffer;
-            TmpSaveFile << str;
+            buffer[length] = '\0';
+            TmpSaveFile.write(buffer, length);
         }
 
-        //Close files and pay memory debt
-        TmpSaveFile.close();
+        //Close files and pay memory debt.
         ifs.close();
+        TmpSaveFile.close();
         delete[] buffer;
         buffer = nullptr;
+
+        return;
     }
 }
