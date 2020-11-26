@@ -37,12 +37,6 @@ tcp::socket& TCP_Connection::GetSocket(void)
 
 void TCP_Connection::Start(void)
 {
-    /*
-    this->incomingMessage.clear();
-    async_read_until(this->socketServer, dynamic_buffer(this->incomingMessage), '\n',
-                     bind(&TCP_Connection::HandleReadFile, shared_from_this(),
-                          placeholders::error, placeholders::bytes_transferred));
-    */
     try
     {
         this->ManageConnection();

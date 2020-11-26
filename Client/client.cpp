@@ -28,7 +28,7 @@ void Client::Run(void)
 
     try
     {
-        this->DoLogin(this->clientSocket.back());
+        this->DoLogin();
         if (this->bIsAuthenticated == false)
             return; //User isn't logged: client will not be able to continue it'execution. So, it's stopped.
 
@@ -70,24 +70,8 @@ void Client::NotifyFileChange(const string& path, const FileSystemWatcher::FileS
 }
 #pragma endregion
 
-#pragma region Private static members:
-string Client::GetData(tcp::socket& socket)
-{
-    boost::asio::streambuf buf;
-    read_until(socket, buf, '\n');
-    string data = buffer_cast<const char*>(buf.data());
-    data.pop_back();
-    return data;
-}
-
-void Client::SendData(tcp::socket& socket, const string& message)
-{
-    write(socket, buffer(message + "\n"));
-}
-#pragma
-
 #pragma Private members:
-void Client::DoLogin(ip::tcp::socket& client_socket)
+void Client::DoLogin(void)
 {
     bool bFirstContinuationCondition;
     do
@@ -95,7 +79,7 @@ void Client::DoLogin(ip::tcp::socket& client_socket)
         this->bIsAuthenticated = false;
 
         //Fetching a mex from the server.
-        this->receivedMex = Client::GetData(client_socket);
+        this->receivedMex = utils::GetDataSynchronously(this->clientSocket.back());
         cout << "[DEBUG] Received message: " << this->receivedMex << endl;
 
         if (this->receivedMex == "AUTH REQUEST")
@@ -116,7 +100,7 @@ void Client::DoLogin(ip::tcp::socket& client_socket)
             //Reading new message from input stream
             getline(cin, this->mexToSend);
             //Send mex to server
-            Client::SendData(client_socket, this->mexToSend);
+            utils::SendDataSynchronously(this->clientSocket.back(), this->mexToSend);
         }
         else if (this->bIsAuthenticated == false)
             cout << "Connection terminated" << endl;

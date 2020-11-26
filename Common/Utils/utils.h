@@ -17,5 +17,8 @@ namespace utils
 
     [[nodiscard]] size_t GetFileSize(std::fstream& fs);
 
-    void SendFile(tcp::socket& socket, const string namePath);
+    void SendDataSynchronously(tcp::socket& socket, const string& message);
+    string GetDataSynchronously(tcp::socket& socket);
+
+    void SendFile(tcp::socket& socket, const string& namePath);
 }

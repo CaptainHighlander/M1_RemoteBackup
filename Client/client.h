@@ -32,13 +32,8 @@ private:
     string pathToWatch;
     std::list<ip::tcp::socket> clientSocket;
 
-    #pragma region Private static members:
-    [[nodiscard]] static string GetData(tcp::socket& socket);
-    static void SendData(tcp::socket& socket, const string& message);
-    #pragma endregion
-
     #pragma region Provate members:
-    void DoLogin(tcp::socket& client_socket);
+    void DoLogin(void);
     [[nodiscard]] list<pair<string,string>> GetDigestFromServer(void) const;
     #pragma endregion
 };

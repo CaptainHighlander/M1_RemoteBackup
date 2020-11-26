@@ -59,17 +59,31 @@ namespace utils
 
     size_t GetFileSize(std::ifstream& fs)
     {
-        size_t length;
+        size_t length = 0;
         if(fs)
         {
-            fs.seekg(0, fs.end);
+            fs.seekg(0, std::ifstream::end);
             length = fs.tellg();
-            fs.seekg(0, fs.beg);
+            fs.seekg(0, std::ifstream::beg);
         }
         return length;
     }
 
-    void SendFile(tcp::socket& socket, const string namePath)
+    void SendDataSynchronously(tcp::socket& socket, const string& message)
+    {
+        write(socket, buffer(message + "\n"));
+    }
+
+    string GetDataSynchronously(tcp::socket& socket)
+    {
+        boost::asio::streambuf buf;
+        read_until(socket, buf, '\n');
+        string data = buffer_cast<const char*>(buf.data());
+        data.pop_back();
+        return data;
+    }
+
+    void SendFile(tcp::socket& socket, const string& namePath)
     {
         if (fs::exists(namePath) == false)
             return;
@@ -104,7 +118,5 @@ namespace utils
         TmpSaveFile.close();
         delete[] buffer;
         buffer = nullptr;
-
-        return;
     }
 }
