@@ -27,7 +27,7 @@ private:
 
     void Disconnect(void);
     void ManageConnection(void);
-    void CheckSynchronization(void) const;
+    void CheckSynchronization(void);
     void DoLogin(void);
     [[nodiscard]] bool CheckLoginCredentials(void);
     void HandleReadFile(const boost::system::error_code& error, size_t bytes_transferred);

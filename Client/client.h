@@ -1,6 +1,7 @@
 #pragma once
 
 #include "FileSystemWatcher/file_system_watcher.h"
+#include "../Common/SharedList/shared_list.hpp"
 
 #include <boost/asio.hpp>
 #include <string>
@@ -9,6 +10,7 @@ using namespace boost::asio;
 using namespace boost::asio::ip;
 using std::string;
 using std::pair;
+using std::unordered_map;
 
 class Client
 {
@@ -24,16 +26,20 @@ public:
     void NotifyFileChange(const std::string& path, const FileSystemWatcher::FileStatus);
     #pragma endregion
 private:
+    list<ip::tcp::socket> clientSocket;
     string address;
     uint16_t port;
     bool bIsAuthenticated;
     string mexToSend;
     string receivedMex;
     string pathToWatch;
-    std::list<ip::tcp::socket> clientSocket;
+    //More threads can access to these lists respecting the RAII paradigm.
+    SharedList<string> filesToDeleteList;
+    SharedList<string> filesToCreateList;
+    SharedList<string> filesToModifyList;
 
-    #pragma region Provate members:
+    #pragma region Private members:
     void DoLogin(void);
-    [[nodiscard]] list<pair<string,string>> GetDigestFromServer(void) const;
+    [[nodiscard]] std::unordered_map<string,string> GetDigestsFromServer(void);
     #pragma endregion
 };

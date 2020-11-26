@@ -26,6 +26,7 @@ add_executable(
         ./Client/client.cpp
         ./Client/FileSystemWatcher/file_system_watcher.cpp
         ./Common/ThreadGuard/thread_guard.cpp
+        ./Common/SharedList/shared_list.hpp
         ./Common/Utils/utils.cpp
 )
 add_executable(
@@ -34,6 +35,7 @@ add_executable(
         ./Server/tcp_connection.cpp
         ./Server/tcp_server.cpp
         ./Server/Database/DAO/dao.cpp
+        ./Common/SharedList/shared_list.hpp
         ./Common/Utils/utils.cpp
 )
 

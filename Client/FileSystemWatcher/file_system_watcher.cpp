@@ -4,11 +4,12 @@
 #include <boost/algorithm/string.hpp>
 
 #pragma region Constructors and destructor:
-FileSystemWatcher::FileSystemWatcher(const string& _pathToWatch)
+FileSystemWatcher::FileSystemWatcher(const string& _pathToWatch, const std::unordered_map<string,string>& digestComputedByServer)
     : pathToWatch(_pathToWatch), bWatching(false)
 {
     //Store information about path (only regular files or folders) that are already in the monitored folder
     this->CheckForSomething(false, nullptr);
+    //TODO usare in qualche modo digestComputedByServer per verificare che il client e il server siano inizialmente allineati.
 }
 
 FileSystemWatcher::~FileSystemWatcher(void)
@@ -60,7 +61,7 @@ void FileSystemWatcher::CheckForSomething(const bool bCheckAlsoDeletedPath, cons
     /*
      * Exception handling: how it's done
      * During monitoring, it's possible that some folder/file is deleted during the execution of some istruction
-     * following a existence check.
+     * following an existence check.
      * It can throw some exception during the execution of some instructions like, for instance, last_write_time,
      * or during the computation of the digest.
      * These exceptions will be ignored, because everything will be solved by the next run of CheckForDeletedPath.
@@ -78,7 +79,7 @@ void FileSystemWatcher::CheckForSomething(const bool bCheckAlsoDeletedPath, cons
         //Consider the exception
         if (fsException.path1() == this->pathToWatch)
         {
-            //TO TO: Notificare al thread principale che c'è stato un problema con quella che era la cartella da monitorare.
+            //TODO: Notificare al thread principale che c'è stato un problema con quella che era la cartella da monitorare.
             //Probabilmente è stata cancellata completamente oppure ha cambiato nome.
 
             this->bWatching = false;
@@ -95,7 +96,7 @@ void FileSystemWatcher::CheckForSomething(const bool bCheckAlsoDeletedPath, cons
     }
     catch (const std::exception& e)
     {
-        //TO DO: Notificare al thread principale che c'è stato un altro tipo di problema nel monitor.
+        //TODO: Notificare al thread principale che c'è stato un altro tipo di problema nel monitor.
 
         this->bWatching = false;
         std::cerr << "Exception FSW\n\t" << e.what() << std::endl;

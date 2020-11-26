@@ -11,6 +11,7 @@
 using std::string;
 using std::unordered_map;
 using std::list;
+using std::pair;
 namespace fs = std::experimental::filesystem;
 
 class FileSystemWatcher
@@ -19,7 +20,7 @@ public:
     enum class FileStatus { FS_Created, FS_Modified, FS_Erased };
 
     #pragma region Constructors and destructor:
-    explicit FileSystemWatcher(const string& _pathToWatch);
+    FileSystemWatcher(const string& _pathToWatch, const std::unordered_map<string,string>& digestComputedByServer);
     //We don't allow operator= because it's unnecessary.
     //On the other hand, we need CopyConstructor since to create a thread inside the class.
     //For now, we use automatic CopyConstructor, since it seems we don't need to overwrite it.
@@ -32,9 +33,9 @@ public:
     void StopWatch(void);
     #pragma endregion
 private:
+    FileSystemWatcher(FileSystemWatcher const&);
     struct FileInfo_s
     {
-        bool bUnvalid = false;
         bool bIsFolder = false;
         bool bIsRegularFile = false;
         fs::file_time_type fileTimeType;

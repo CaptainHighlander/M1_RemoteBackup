@@ -57,6 +57,20 @@ namespace utils
         }
     }
 
+    pair<string,string> SplitString(const string& str, const char delimitator)
+    {
+        string firstStr;
+        string secondStr;
+
+        const size_t pos = str.find_first_of(delimitator);
+        if (pos != string::npos)
+        {
+            firstStr = str.substr(0, pos);
+            secondStr = str.substr(pos + 1);
+        }
+        return std::make_pair(firstStr, secondStr);
+    }
+
     size_t GetFileSize(std::ifstream& fs)
     {
         size_t length = 0;
@@ -79,6 +93,7 @@ namespace utils
         boost::asio::streambuf buf;
         read_until(socket, buf, '\n');
         string data = buffer_cast<const char*>(buf.data());
+        // Popping last character '\n'
         data.pop_back();
         return data;
     }

@@ -62,6 +62,11 @@ void TCP_Connection::ManageConnection(void)
 {
     //Try to do login.
     this->DoLogin();
+
+    //Reset incoming and outgoing messages.
+    this->incomingMessage.clear();
+    this->outgoingMessage.clear();
+
     //A new connection has been established:
     if (this->associatedUserID.empty() == false)
     {
@@ -70,8 +75,9 @@ void TCP_Connection::ManageConnection(void)
     }
 }
 
-void TCP_Connection::CheckSynchronization(void) const
+void TCP_Connection::CheckSynchronization(void)
 {
+    //Creation of a list of pair (file name, digest).
     list<pair<string,string>> digestList;
     string digestStr;
     for (auto &path_iterator : fs::recursive_directory_iterator(USERS_PATH + this->associatedUserID))
@@ -83,6 +89,22 @@ void TCP_Connection::CheckSynchronization(void) const
         digestStr = utils::DigestFromFile(path_iterator.path().string());
         digestList.push_back(std::make_pair(path_iterator.path().string(), std::move(digestStr)));
     }
+
+    //For each computed digest, send both it and its file name to the the client
+    while (digestList.empty() == false)
+    {
+        //Get an element from the list of digest.
+        auto const& digest_iterator = digestList.front();
+        this->outgoingMessage = digest_iterator.first + "\n" + digest_iterator.second;
+        //Send a message to client
+        utils::SendDataSynchronously(this->socketServer, this->outgoingMessage);
+        //Remove element from the list.
+        digestList.pop_front();
+    }
+    //There are no further digests to send.
+    this->outgoingMessage = "DIGESTS_LIST_EMPTY";
+    //Send a message to client
+    utils::SendDataSynchronously(this->socketServer, this->outgoingMessage);
 }
 
 void TCP_Connection::DoLogin(void)
@@ -90,15 +112,13 @@ void TCP_Connection::DoLogin(void)
     std::cout << "[DEBUG] Start login" << std::endl;
 
     this->outgoingMessage = "AUTH REQUEST";
-    write(this->socketServer, buffer(this->outgoingMessage + "\n"));
+    //Send a message to client
+    utils::SendDataSynchronously(this->socketServer, this->outgoingMessage);
 
     while (this->associatedUserID.empty() == true && this->failedLoginAttempts <= this->MAX_NUMBER_OF_FAILED_LOGINS)
     {
-        //Clear previous incoming message.
-        this->incomingMessage.clear();
-        read_until(this->socketServer, dynamic_buffer(this->incomingMessage), '\n');
-        // Popping last character "\n"
-        this->incomingMessage.pop_back();
+        //Get a new message from the client
+        this->incomingMessage = utils::GetDataSynchronously(this->socketServer);
 
         //Verify provided credentials and provide a response to the client:
         if (this->CheckLoginCredentials() == true)
@@ -110,7 +130,8 @@ void TCP_Connection::DoLogin(void)
             this->failedLoginAttempts += 1;
             this->outgoingMessage = (this->failedLoginAttempts <= this->MAX_NUMBER_OF_FAILED_LOGINS) ? "AUTH REQUEST RETRY" : "ACCESS DENIED";
         }
-        write(this->socketServer, buffer(this->outgoingMessage + "\n"));
+        //Send a message to client
+        utils::SendDataSynchronously(this->socketServer, this->outgoingMessage);
     }
 }
 
@@ -164,6 +185,7 @@ bool TCP_Connection::CheckLoginCredentials(void)
 
 void TCP_Connection::HandleReadFile(const boost::system::error_code& error, size_t bytes_transferred)
 {
+    //TMP
     std::ofstream ofs;
     ofs.open("txtServer.txt", std::ios::app);
     if (ofs.is_open() == true)

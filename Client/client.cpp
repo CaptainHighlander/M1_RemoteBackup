@@ -33,7 +33,7 @@ void Client::Run(void)
             return; //User isn't logged: client will not be able to continue it'execution. So, it's stopped.
 
         this->pathToWatch = "./FoldersTest/Riccardo_Client";
-        FileSystemWatcher fsw { pathToWatch };
+        FileSystemWatcher fsw { pathToWatch, this->GetDigestsFromServer() };
         const std::function<void(const std::string&, FileSystemWatcher::FileStatus)> fswActionFunc = std::bind(&Client::NotifyFileChange, this, std::placeholders::_1, std::placeholders::_2);
         fsw.StartWatch(fswActionFunc);
         do
@@ -50,17 +50,20 @@ void Client::Run(void)
 
 void Client::NotifyFileChange(const string& path, const FileSystemWatcher::FileStatus fs)
 {
-    string debugStr;
+    string debugStr; //TMP string.
     switch(fs)
     {
         case FileSystemWatcher::FileStatus::FS_Created:
             debugStr = "Creato";
+            this->filesToCreateList.push_back(path);
             break;
         case FileSystemWatcher::FileStatus::FS_Modified:
             debugStr = "Modificato";
+            this->filesToModifyList.push_back(path);
             break;
         case FileSystemWatcher::FileStatus::FS_Erased:
             debugStr = "Cancellato";
+            this->filesToDeleteList.push_back(path);
             break;
         default:
             return;
@@ -111,9 +114,16 @@ void Client::DoLogin(void)
     this->receivedMex = "";
 }
 
-list<pair<string, string>> Client::GetDigestFromServer(void) const
+std::unordered_map<string,string> Client::GetDigestsFromServer(void)
 {
-    list<pair<string, string>> digestList;
-    return digestList;
+    std::unordered_map<string,string> digestMap;
+    this->receivedMex = utils::GetDataSynchronously(this->clientSocket.back());
+    while (this->receivedMex != "DIGESTS_LIST_EMPTY")
+    {
+        pair<string, string> element = utils::SplitString(this->receivedMex, '\n');
+        digestMap[std::move(element.first)] = std::move(element.second);
+        this->receivedMex = utils::GetDataSynchronously(this->clientSocket.back());
+    }
+    return digestMap;
 }
 #pragma endregion
