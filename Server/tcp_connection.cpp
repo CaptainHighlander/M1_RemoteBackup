@@ -85,7 +85,7 @@ void TCP_Connection::CheckSynchronization(void)
 {
     //Creation of a list of pair (file name, digest).
     list<pair<string,string>> digestList;
-    string digestStr;
+    std::optional<string> digestStr;
     for (auto &path_iterator : fs::recursive_directory_iterator(USERS_PATH + this->associatedUserID))
     {
         string pathName = path_iterator.path().string();
@@ -95,12 +95,14 @@ void TCP_Connection::CheckSynchronization(void)
 
         //Compute current digest.
         digestStr = utils::DigestFromFile(pathName);
+        if (digestStr.has_value() == false)
+            continue;
 
         //Remove main path from the current path
         utils::EraseSubStr(pathName, USERS_PATH + this->associatedUserID);
 
         //Store computed digest
-        digestList.push_back(std::make_pair(pathName, std::move(digestStr)));
+        digestList.push_back(std::make_pair(pathName, std::move(digestStr.value())));
     }
 
     //For each computed digest, send both it and its file name to the the client

@@ -11,7 +11,7 @@ namespace fs = std::experimental::filesystem;
 
 namespace utils
 {
-    string DigestFromFile(const string& path)
+    optional<string> DigestFromFile(const string& path)
     {
         //Folders have always an empty digest.
         if (fs::is_regular_file(path) == false)
@@ -21,32 +21,41 @@ namespace utils
         if (fs::is_empty(path) == true)
             return "";
 
-        //TODO Fix digest computation for bigger files (greater than 512 bytes, name included)
         /* Computation of the digest */
-        unsigned char digest[SHA512_DIGEST_LENGTH];
-        //First of all, we try to access to the memory-mapped file.
-        //(The advantage of memory mapping a file is increasing I/O performance, especially when used on big files).
-        //If it has been correctly opened, we compute digest using the strong algorithm SHA512.
-        //Finally, we convert computed digest to a string.
-        boost::iostreams::mapped_file_source mfs;
-        mfs.open(path, boost::iostreams::mapped_file_source::readwrite);
-        if (mfs.is_open() == true)
+        char block[SHA512_CBLOCK];
+        SHA512_CTX mdContext;
+        if (SHA512_Init(&mdContext) == false)
+            return std::nullopt;
+        std::ifstream file(path, std::ios::in | std::ios::binary);
+        if (file.is_open() == true)
         {
-            SHA512((unsigned char*) mfs.data(), mfs.size(), digest);
-            mfs.close();
+            //Update digest using every chunk of the file.
+            while (file.good() == true)
+            {
+                file.read(block, sizeof(block));
+                if(SHA512_Update(&mdContext, block, file.gcount()) == false)
+                {
+                    file.close();
+                    return std::nullopt;
+                }
+            }
+            file.close();
 
-            //Conversion of the digest to a string
+            //Get final digest.
+            unsigned char digest[SHA512_DIGEST_LENGTH];
+            if (SHA512_Final(digest, &mdContext) == false)
+                return std::nullopt;
+
+            //Conversion of the digest to a string: transform byte-array to string
             std::ostringstream digestOStr;
             digestOStr << std::hex << std::setfill('0');
-            for (auto& c: digest)
-                digestOStr << std::setw(2) << (int) c;
+            for (const auto& byte: digest)
+                digestOStr << std::setw(2) << (int) byte;
 
-            //if(path == "./FoldersTest/Riccardo_Client/AlreadyServerSide/ServerHasThisFile.txt")
-                //std::cout << digestOStr.str() << std::endl;
             return digestOStr.str();
         }
 
-        return "";
+        return std::nullopt;
     }
 
     void EraseSubStr(string& mainStr, const string& toErase)
