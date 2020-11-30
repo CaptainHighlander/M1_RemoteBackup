@@ -72,6 +72,12 @@ void TCP_Connection::ManageConnection(void)
     {
         //Check if the folder associated to the connected user has the same files that are in the folder client-side.
         this->CheckSynchronization();
+
+        //TODO - Incoming files
+        do
+        {
+
+        }   while (this->incomingMessage != "EXIT" && this->outgoingMessage != "EXIT");
     }
 }
 
@@ -82,22 +88,37 @@ void TCP_Connection::CheckSynchronization(void)
     string digestStr;
     for (auto &path_iterator : fs::recursive_directory_iterator(USERS_PATH + this->associatedUserID))
     {
+        string pathName = path_iterator.path().string();
         //Check if the current path is a directory or a regular file
         if (fs::is_directory(path_iterator.path()) == false && fs::is_regular_file(path_iterator.path()) == false)
             continue;
-        //Compute current digest and store it.
-        digestStr = utils::DigestFromFile(path_iterator.path().string());
-        digestList.push_back(std::make_pair(path_iterator.path().string(), std::move(digestStr)));
+
+        //Compute current digest.
+        digestStr = utils::DigestFromFile(pathName);
+
+        //Remove main path from the current path
+        utils::EraseSubStr(pathName, USERS_PATH + this->associatedUserID);
+
+        //Store computed digest
+        digestList.push_back(std::make_pair(pathName, std::move(digestStr)));
     }
 
     //For each computed digest, send both it and its file name to the the client
     while (digestList.empty() == false)
     {
-        //Get an element from the list of digest.
+        //Get an element from the list of digests.
         auto const& digest_iterator = digestList.front();
         this->outgoingMessage = digest_iterator.first + "\n" + digest_iterator.second;
+
         //Send a message to client
         utils::SendDataSynchronously(this->socketServer, this->outgoingMessage);
+
+        //Wait ACK
+        do
+        {
+            this->incomingMessage = utils::GetDataSynchronously(this->socketServer);
+        }   while (this->incomingMessage != "ACK_DIGEST");
+
         //Remove element from the list.
         digestList.pop_front();
     }
@@ -141,7 +162,7 @@ bool TCP_Connection::CheckLoginCredentials(void)
         return false;
 
     //Try to get username and password provided from the client.
-    size_t pos = this->incomingMessage.find_first_of(' ');
+    const size_t pos = this->incomingMessage.find_first_of(' ');
     if (pos != string::npos) //User has provided an username and a password.
     {
         /**** Authentication in progress... ****/

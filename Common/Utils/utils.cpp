@@ -21,6 +21,7 @@ namespace utils
         if (fs::is_empty(path) == true)
             return "";
 
+        //TODO Fix digest computation for bigger files (greater than 512 bytes, name included)
         /* Computation of the digest */
         unsigned char digest[SHA512_DIGEST_LENGTH];
         //First of all, we try to access to the memory-mapped file.
@@ -40,6 +41,8 @@ namespace utils
             for (auto& c: digest)
                 digestOStr << std::setw(2) << (int) c;
 
+            //if(path == "./FoldersTest/Riccardo_Client/AlreadyServerSide/ServerHasThisFile.txt")
+                //std::cout << digestOStr.str() << std::endl;
             return digestOStr.str();
         }
 

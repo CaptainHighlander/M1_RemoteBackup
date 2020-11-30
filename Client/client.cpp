@@ -26,19 +26,24 @@ void Client::Run(void)
     //Try to connect to server
     this->clientSocket.back().connect(tcp::endpoint(address::from_string(this->address), this->port));
 
+    //Eexecution...
     try
     {
+        //Try to do login.
         this->DoLogin();
         if (this->bIsAuthenticated == false)
             return; //User isn't logged: client will not be able to continue it'execution. So, it's stopped.
 
+        // Init a file watcher checking for the synchronization between client and server
         this->pathToWatch = "./FoldersTest/Riccardo_Client";
-        FileSystemWatcher fsw { pathToWatch, this->GetDigestsFromServer() };
         const std::function<void(const std::string&, FileSystemWatcher::FileStatus)> fswActionFunc = std::bind(&Client::NotifyFileChange, this, std::placeholders::_1, std::placeholders::_2);
-        fsw.StartWatch(fswActionFunc);
+        FileSystemWatcher fsw { pathToWatch, this->GetDigestsFromServer(), fswActionFunc };
+        fsw.StartWatch();
+
+        //TODO - Outgoing files
         do
         {
-            ;
+            //utils::SendFile(this->clientSocket.back(), this->pathToWatch + path);
         }
         while (this->receivedMex != "EXIT" && this->mexToSend != "EXIT");
     }
@@ -68,8 +73,7 @@ void Client::NotifyFileChange(const string& path, const FileSystemWatcher::FileS
         default:
             return;
     }
-    cout << "[DEBUG] Client::NotifyFileChange --> path = " << path << "\n\tStatus =" << debugStr <<  endl;
-    utils::SendFile(this->clientSocket.back(), this->pathToWatch + path);
+    cout << "[DEBUG] Client::NotifyFileChange --> path = " << path << "\n\tStatus = " << debugStr <<  endl;
 }
 #pragma endregion
 
@@ -109,7 +113,7 @@ void Client::DoLogin(void)
             cout << "Connection terminated" << endl;
     }   while (bFirstContinuationCondition && this->mexToSend != "EXIT");
 
-    //Reset message.
+    //Reset messages
     this->mexToSend = "";
     this->receivedMex = "";
 }
@@ -117,12 +121,24 @@ void Client::DoLogin(void)
 std::unordered_map<string,string> Client::GetDigestsFromServer(void)
 {
     std::unordered_map<string,string> digestMap;
+    this->mexToSend = "ACK_DIGEST";
+
+    //Try to get first digest.
     this->receivedMex = utils::GetDataSynchronously(this->clientSocket.back());
+    cout << "[DEBUG] Received message: " << this->receivedMex << endl;
+
     while (this->receivedMex != "DIGESTS_LIST_EMPTY")
     {
+        //Extract the digest and the filename associated with it
         pair<string, string> element = utils::SplitString(this->receivedMex, '\n');
         digestMap[std::move(element.first)] = std::move(element.second);
+
+        //Send ACK
+        utils::SendDataSynchronously(this->clientSocket.back(), mexToSend);
+
+        //Try to get an another digest.
         this->receivedMex = utils::GetDataSynchronously(this->clientSocket.back());
+        cout << "[DEBUG] Received message: " << this->receivedMex << endl;
     }
     return digestMap;
 }

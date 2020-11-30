@@ -18,9 +18,11 @@ class FileSystemWatcher
 {
 public:
     enum class FileStatus { FS_Created, FS_Modified, FS_Erased };
+    typedef std::unordered_map<string,string> digestsMap;
+    typedef std::function<void (const string&, const FileStatus)> notificationFunc;
 
     #pragma region Constructors and destructor:
-    FileSystemWatcher(const string& _pathToWatch, const std::unordered_map<string,string>& digestComputedByServer);
+    FileSystemWatcher(const string& _pathToWatch, const digestsMap& _digestComputedByServer, const notificationFunc& _action);
     //We don't allow operator= because it's unnecessary.
     //On the other hand, we need CopyConstructor since to create a thread inside the class.
     //For now, we use automatic CopyConstructor, since it seems we don't need to overwrite it.
@@ -29,21 +31,17 @@ public:
     #pragma endregion
 
     #pragma region Public members:
-    void StartWatch(const std::function<void (const string&, const FileStatus)> &action);
+    void StartWatch(void);
     void StopWatch(void);
     #pragma endregion
 private:
+    //Copy constructor
     FileSystemWatcher(FileSystemWatcher const&);
-    struct FileInfo_s
-    {
-        bool bIsFolder = false;
-        bool bIsRegularFile = false;
-        fs::file_time_type fileTimeType;
-        string digest;
-    };
+
     bool bWatching;
     string pathToWatch;
-    unordered_map<string, FileInfo_s> monitoredFiles;
+    digestsMap monitoredFiles;
+    notificationFunc actionFunc;
 
     //Each of two lists contain only an element.
     //We are using list in order to don't create a thread and a ThreadGuard before the time.
@@ -54,8 +52,8 @@ private:
 
     #pragma region Private members:
     void Watching(const std::function<void (const string&, const FileStatus)> &action);
-    void CheckForSomething(const bool bCheckAlsoDeletedPath, const std::function<void (const string&, const FileStatus)> &actionFunct);
-    void CheckForDeletedPath(const std::function<void (const string&, const FileStatus)> &action);
-    void CheckForCreatedOrModifiedPath(const std::function<void (const string&, const FileStatus)> &action);
+    void CheckForSomething(void);
+    void CheckForDeletedPath(void);
+    void CheckForCreatedOrModifiedPath(void);
     #pragma endregion
 };

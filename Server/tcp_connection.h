@@ -15,6 +15,7 @@ class TCP_Connection : public boost::enable_shared_from_this<TCP_Connection>
 {
 public:
     typedef boost::shared_ptr<TCP_Connection> pointer;
+
     TCP_Connection(TCP_Connection const&) = delete;
     TCP_Connection& operator=(TCP_Connection const&) = delete;
     ~TCP_Connection(void);

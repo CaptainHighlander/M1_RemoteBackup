@@ -4,12 +4,14 @@
 #include <boost/algorithm/string.hpp>
 
 #pragma region Constructors and destructor:
-FileSystemWatcher::FileSystemWatcher(const string& _pathToWatch, const std::unordered_map<string,string>& digestComputedByServer)
-    : pathToWatch(_pathToWatch), bWatching(false)
+FileSystemWatcher::FileSystemWatcher(const string& _pathToWatch, const digestsMap& _digestComputedByServer, const notificationFunc& _action)
+    : pathToWatch(_pathToWatch), bWatching(false), actionFunc(_action)
 {
-    //Store information about path (only regular files or folders) that are already in the monitored folder
-    this->CheckForSomething(false, nullptr);
-    //TODO usare in qualche modo digestComputedByServer per verificare che il client e il server siano inizialmente allineati.
+    //Use the map containg the pair <fileName, digest> as initial monitored files to verify
+    // if client and server are synchronized.
+    this->monitoredFiles = _digestComputedByServer;
+    //Check synchronization between cliend and server.
+    this->CheckForSomething();
 }
 
 FileSystemWatcher::~FileSystemWatcher(void)
@@ -21,7 +23,7 @@ FileSystemWatcher::~FileSystemWatcher(void)
 #pragma endregion
 
 #pragma region Public members:
-void FileSystemWatcher::StartWatch(const std::function<void (const string&, const FileStatus)> &action)
+void FileSystemWatcher::StartWatch(void)
 {
     //File system watching is already monitoring, so return from current function.
     if (this->bWatching == true)
@@ -30,7 +32,7 @@ void FileSystemWatcher::StartWatch(const std::function<void (const string&, cons
     this->bWatching = true;
     //Create a new thread and it's associated to a ThreadGuard to guarantee RAII idiom.
     //Monitoring will be runned asynchronously, in an other thread.
-    this->watchingThread.push_back(std::thread(&FileSystemWatcher::Watching, this, action));
+    this->watchingThread.push_back(std::thread(&FileSystemWatcher::Watching, this, this->actionFunc));
     this->watchingThread.back().detach();
     this->watchingThreadGuard.push_back(ThreadGuard{this->watchingThread.back()});
 }
@@ -51,12 +53,12 @@ void FileSystemWatcher::Watching(const std::function<void (const string&, const 
     std::cout << "[DEBUG] Start watching" << std::endl;
     while (this->bWatching == true)
     {
-        this->CheckForSomething(true, actionFunct);
+        this->CheckForSomething();
     }
     std::cout << "[DEBUG] Stop watching" << std::endl;
 }
 
-void FileSystemWatcher::CheckForSomething(const bool bCheckAlsoDeletedPath, const std::function<void (const string&, const FileStatus)> &actionFunct)
+void FileSystemWatcher::CheckForSomething(void)
 {
     /*
      * Exception handling: how it's done
@@ -70,9 +72,8 @@ void FileSystemWatcher::CheckForSomething(const bool bCheckAlsoDeletedPath, cons
      */
     try
     {
-        if (bCheckAlsoDeletedPath == true)
-            this->CheckForDeletedPath(actionFunct);
-        this->CheckForCreatedOrModifiedPath(actionFunct);
+        this->CheckForDeletedPath();
+        this->CheckForCreatedOrModifiedPath();
     }
     catch (const fs::filesystem_error& fsException)
     {
@@ -104,7 +105,7 @@ void FileSystemWatcher::CheckForSomething(const bool bCheckAlsoDeletedPath, cons
     }
 }
 
-void FileSystemWatcher::CheckForDeletedPath(const std::function<void(const string&, const FileStatus)>& actionFunct)
+void FileSystemWatcher::CheckForDeletedPath(void)
 {
     //Iterates over all monitored path
     auto path_it = this->monitoredFiles.begin();
@@ -113,7 +114,7 @@ void FileSystemWatcher::CheckForDeletedPath(const std::function<void(const strin
         const string pathName = this->pathToWatch + path_it->first;
         if (fs::exists(pathName) == false)
         {
-            actionFunct(path_it->first, FileStatus::FS_Erased);
+            this->actionFunc(path_it->first, FileStatus::FS_Erased);
             path_it = this->monitoredFiles.erase(path_it); //Delete current element from the map and then go to the next path.
         }
         else
@@ -121,51 +122,41 @@ void FileSystemWatcher::CheckForDeletedPath(const std::function<void(const strin
     }
 }
 
-void FileSystemWatcher::CheckForCreatedOrModifiedPath(const std::function<void(const string&, const FileStatus)>& actionFunct)
+void FileSystemWatcher::CheckForCreatedOrModifiedPath(void)
 {
     for (auto& path_iterator : fs::recursive_directory_iterator(this->pathToWatch))
     {
         std::string pathName = path_iterator.path().string();
         if (boost::algorithm::contains(pathName, "goutputstream") == true)
             continue;
-        FileInfo_s sFI;
 
         //Check if the current path is a directory or a regular file
-        if (fs::is_directory(path_iterator.path()) == true)
-            sFI.bIsFolder = true;
-        else if (fs::is_regular_file(path_iterator.path()) == true)
-            sFI.bIsRegularFile = true;
-        else
+        if (fs::is_directory(path_iterator.path()) == false && fs::is_regular_file(path_iterator.path()) == false)
             continue;
 
-        //Compute digest of the file. Folder will always have empty digest.
-        sFI.digest = utils::DigestFromFile(pathName);
+        //Compute digest of the file. Folders will always have an empty digest.
+        const string digest = utils::DigestFromFile(pathName);
         //std::cout << "[DEBUG] " << pathName << " has digest:\n\t" << sFI.digest << std::endl;
 
         //Check when file has been updated last time.
-        sFI.fileTimeType = fs::last_write_time(path_iterator);
+        //sFI.fileTimeType = fs::last_write_time(path_iterator);
 
         //Remove main path from the current path
         utils::EraseSubStr(pathName, this->pathToWatch);
 
-        //If actionFunct is a pointer to some function run this code block.
-        //actionFunct should be nullptr only if FileSystemWatcher::CheckForCreatedOrModifiedPath is called by the constructor of this class.
-        if (actionFunct.operator bool() == true)
+        //Created (new or renamed) file
+        if (this->monitoredFiles.count(pathName) < 1)
         {
-            //Created (new or renamed) file
-            if (this->monitoredFiles.count(pathName) < 1)
-            {
-                actionFunct(pathName, FileStatus::FS_Created);
-            }
-            //Modified file
-            else if (this->monitoredFiles.at(pathName).fileTimeType != sFI.fileTimeType)
-            {
-                actionFunct(pathName, FileStatus::FS_Modified);
-            }
+            this->actionFunc(pathName, FileStatus::FS_Created);
+        }
+        //Modified file
+        else if (this->monitoredFiles.at(pathName) != digest)
+        {
+            this->actionFunc(pathName, FileStatus::FS_Modified);
         }
 
         //Update information about file.
-        this->monitoredFiles[pathName] = sFI;
+        this->monitoredFiles[pathName] = digest;
     }
 }
 #pragma endregion
