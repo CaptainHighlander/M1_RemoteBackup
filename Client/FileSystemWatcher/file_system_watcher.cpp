@@ -32,7 +32,7 @@ void FileSystemWatcher::StartWatch(void)
     this->bWatching = true;
     //Create a new thread and it's associated to a ThreadGuard to guarantee RAII idiom.
     //Monitoring will be runned asynchronously, in an other thread.
-    this->watchingThread.push_back(std::thread(&FileSystemWatcher::Watching, this, this->actionFunc));
+    this->watchingThread.push_back(std::thread(&FileSystemWatcher::Watching, this));
     this->watchingThread.back().detach();
     this->watchingThreadGuard.push_back(ThreadGuard{this->watchingThread.back()});
 }
@@ -48,7 +48,7 @@ void FileSystemWatcher::StopWatch(void)
 #pragma endregion
 
 #pragma region Private members:
-void FileSystemWatcher::Watching(const std::function<void (const string&, const FileStatus)> &actionFunct)
+void FileSystemWatcher::Watching(void)
 {
     std::cout << "[DEBUG] Start watching" << std::endl;
     while (this->bWatching == true)
@@ -114,7 +114,9 @@ void FileSystemWatcher::CheckForDeletedPath(void)
         const string pathName = this->pathToWatch + path_it->first;
         if (fs::exists(pathName) == false)
         {
-            this->actionFunc(path_it->first, FileStatus::FS_Erased);
+            fs::path p = path_it->first;
+            if (fs::exists(this->pathToWatch + p.parent_path().string()) == true)
+                this->actionFunc(path_it->first, FileStatus::FS_Erased);
             path_it = this->monitoredFiles.erase(path_it); //Delete current element from the map and then go to the next path.
         }
         else
@@ -138,10 +140,7 @@ void FileSystemWatcher::CheckForCreatedOrModifiedPath(void)
         const std::optional<string> digest = utils::DigestFromFile(pathName);
         if (digest.has_value() == false)
             continue;
-        //std::cout << "[DEBUG] " << pathName << " has digest:\n\t" << sFI.digest << std::endl;
-
-        //Check when file has been updated last time.
-        //sFI.fileTimeType = fs::last_write_time(path_iterator);
+        //std::cout << "[DEBUG] " << pathName << " has digest:\n\t" << digest.value() << std::endl;
 
         //Remove main path from the current path
         utils::EraseSubStr(pathName, this->pathToWatch);

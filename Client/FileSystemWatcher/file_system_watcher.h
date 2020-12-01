@@ -18,8 +18,8 @@ class FileSystemWatcher
 {
 public:
     enum class FileStatus { FS_Created, FS_Modified, FS_Erased };
-    typedef std::unordered_map<string,string> digestsMap;
-    typedef std::function<void (const string&, const FileStatus)> notificationFunc;
+    typedef unordered_map<string,string> digestsMap;
+    typedef std::function<void(const std::string&, FileSystemWatcher::FileStatus)> notificationFunc;
 
     #pragma region Constructors and destructor:
     FileSystemWatcher(const string& _pathToWatch, const digestsMap& _digestComputedByServer, const notificationFunc& _action);
@@ -51,7 +51,7 @@ private:
     list<ThreadGuard> watchingThreadGuard;
 
     #pragma region Private members:
-    void Watching(const std::function<void (const string&, const FileStatus)> &action);
+    void Watching(void);
     void CheckForSomething(void);
     void CheckForDeletedPath(void);
     void CheckForCreatedOrModifiedPath(void);

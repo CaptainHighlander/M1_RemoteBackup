@@ -70,13 +70,31 @@ void TCP_Connection::ManageConnection(void)
     //A new connection has been established:
     if (this->associatedUserID.empty() == false)
     {
+        //Set folder associated to logged user.
+        this->userFolder = USERS_PATH + this->associatedUserID;
+
         //Check if the folder associated to the connected user has the same files that are in the folder client-side.
         this->CheckSynchronization();
 
         //TODO - Incoming files
+        pair<string, string> receivedMexPair;
         do
         {
+            //Get a command from the client
+            this->incomingMessage = utils::GetDataSynchronously(this->socketServer);
+            //std::cout << "[DEBUG] Received " << this->incomingMessage << std::endl;
+            receivedMexPair = utils::SplitString(this->incomingMessage, ' ');
 
+            //Deleting a path
+            if (receivedMexPair.first == "RM")
+            {
+                const string pathToRemove = this->userFolder + receivedMexPair.second;
+                if (fs::exists(pathToRemove) == true)
+                    fs::remove(pathToRemove); //Perform deletion.
+            }
+
+            //Adding a path
+            //TODO
         }   while (this->incomingMessage != "EXIT" && this->outgoingMessage != "EXIT");
     }
 }
@@ -86,7 +104,7 @@ void TCP_Connection::CheckSynchronization(void)
     //Creation of a list of pair (file name, digest).
     list<pair<string,string>> digestList;
     std::optional<string> digestStr;
-    for (auto &path_iterator : fs::recursive_directory_iterator(USERS_PATH + this->associatedUserID))
+    for (auto &path_iterator : fs::recursive_directory_iterator(this->userFolder))
     {
         string pathName = path_iterator.path().string();
         //Check if the current path is a directory or a regular file
@@ -99,13 +117,13 @@ void TCP_Connection::CheckSynchronization(void)
             continue;
 
         //Remove main path from the current path
-        utils::EraseSubStr(pathName, USERS_PATH + this->associatedUserID);
+        utils::EraseSubStr(pathName, this->userFolder);
 
         //Store computed digest
         digestList.push_back(std::make_pair(pathName, std::move(digestStr.value())));
     }
 
-    //For each computed digest, send both it and its file name to the the client
+    //For each computed digest, send both it and its file name to the the client annd say if the path is a directory or a file
     while (digestList.empty() == false)
     {
         //Get an element from the list of digests.

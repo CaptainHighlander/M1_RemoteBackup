@@ -34,6 +34,7 @@ private:
     void HandleReadFile(const boost::system::error_code& error, size_t bytes_transferred);
 
     const string USERS_PATH = "./Users/";
+    ///The socket used for network comunications.
     tcp::socket socketServer;
     ///The data to be sent.
     string outgoingMessage;
@@ -41,6 +42,9 @@ private:
     string incomingMessage;
     ///The user who has logged into this connection.
     string associatedUserID;
+    ///The folder associated to the logged user.
+    string userFolder;
+
     uint8_t failedLoginAttempts;
     const uint8_t MAX_NUMBER_OF_FAILED_LOGINS = 2;
 };

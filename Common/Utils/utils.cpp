@@ -5,7 +5,6 @@
 #include <experimental/filesystem>
 #include <iomanip>
 #include <openssl/sha.h>
-#include <boost/iostreams/device/mapped_file.hpp>
 
 namespace fs = std::experimental::filesystem;
 

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "FileSystemWatcher/file_system_watcher.h"
-#include "../Common/SharedList/shared_list.hpp"
+#include "../Common/SharedSet/shared_set.hpp"
 
 #include <boost/asio.hpp>
 #include <string>
@@ -33,13 +33,15 @@ private:
     string mexToSend;
     string receivedMex;
     string pathToWatch;
-    //More threads can access to these lists respecting the RAII paradigm.
-    SharedList<string> filesToDeleteList;
-    SharedList<string> filesToCreateList;
-    SharedList<string> filesToModifyList;
+
+    //More threads can access to these attribures respecting the RAII paradigm.
+    //Since a SharedSet object encapsulates a set, the elements will be inserted in order.
+    SharedSet<string> filesToDeleteSet;
+    SharedSet<string> filesToCreateSet;
+    SharedSet<string> filesToModifySet;
 
     #pragma region Private members:
     void DoLogin(void);
-    [[nodiscard]] std::unordered_map<string,string> GetDigestsFromServer(void);
+    [[nodiscard]] unordered_map<string,string> GetDigestsFromServer(void);
     #pragma endregion
 };

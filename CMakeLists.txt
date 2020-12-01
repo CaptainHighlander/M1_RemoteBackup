@@ -27,6 +27,7 @@ add_executable(
         ./Client/FileSystemWatcher/file_system_watcher.cpp
         ./Common/ThreadGuard/thread_guard.cpp
         ./Common/SharedList/shared_list.hpp
+        ./Common/SharedSet/shared_set.hpp
         ./Common/Utils/utils.cpp
 )
 add_executable(
@@ -35,7 +36,6 @@ add_executable(
         ./Server/tcp_connection.cpp
         ./Server/tcp_server.cpp
         ./Server/Database/DAO/dao.cpp
-        ./Common/SharedList/shared_list.hpp
         ./Common/Utils/utils.cpp
 )
 
@@ -49,13 +49,11 @@ add_executable(
 
 # Links some external libraries used by the client module
 target_link_libraries(RemoteBackupClient pthread)
-target_link_libraries(RemoteBackupClient boost_iostreams)
 target_link_libraries(RemoteBackupClient crypto)
 target_link_libraries(RemoteBackupClient ssl)
 
 # Links some external libraries used by the server module
 target_link_libraries(RemoteBackupServer pthread)
-target_link_libraries(RemoteBackupServer boost_iostreams)
 target_link_libraries(RemoteBackupServer crypto)
 target_link_libraries(RemoteBackupServer ssl)
 target_link_libraries(RemoteBackupServer sqlite3)

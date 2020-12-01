@@ -26,7 +26,7 @@ void Client::Run(void)
     //Try to connect to server
     this->clientSocket.back().connect(tcp::endpoint(address::from_string(this->address), this->port));
 
-    //Eexecution...
+    //Execution...
     try
     {
         //Try to do login.
@@ -34,15 +34,43 @@ void Client::Run(void)
         if (this->bIsAuthenticated == false)
             return; //User isn't logged: client will not be able to continue it'execution. So, it's stopped.
 
-        // Init a file watcher checking for the synchronization between client and server
+        //Init a file watcher checking for the synchronization between client and server
         this->pathToWatch = "./FoldersTest/Riccardo_Client";
-        const std::function<void(const std::string&, FileSystemWatcher::FileStatus)> fswActionFunc = std::bind(&Client::NotifyFileChange, this, std::placeholders::_1, std::placeholders::_2);
+        const FileSystemWatcher::notificationFunc fswActionFunc = std::bind(&Client::NotifyFileChange, this, std::placeholders::_1, std::placeholders::_2);
         FileSystemWatcher fsw { pathToWatch, this->GetDigestsFromServer(), fswActionFunc };
         fsw.StartWatch();
 
         //TODO - Outgoing files
         do
         {
+            //Communicates the paths to be deleted
+            while (this->filesToDeleteSet.IsEmpty() == false)
+            {
+                //Extract the next element (it will be removed from the set of file to delete).
+                std::optional<string> pathToDelete = this->filesToDeleteSet.Extract();
+                if (pathToDelete.has_value() == true)
+                {
+                    this->mexToSend = "RM " + pathToDelete.value();
+                    //std::cout << "[DEBUG] Sending " << this->mexToSend << std::endl;
+                    utils::SendDataSynchronously(this->clientSocket.back(), this->mexToSend);
+                }
+            }
+
+            //Communicates the paths to be modified
+            for (auto const& it : this->filesToModifySet)
+            {
+                //TODO
+                //std::cout << it << std::endl;
+                //this->filesToModifySet.Remove(it);
+            }
+
+            //Communicates the paths to be created
+            for (auto const& it : this->filesToCreateSet)
+            {
+                //TODO
+                //std::cout << it << std::endl;
+                //this->filesToCreateSet.Remove(it);
+            }
             //utils::SendFile(this->clientSocket.back(), this->pathToWatch + path);
         }
         while (this->receivedMex != "EXIT" && this->mexToSend != "EXIT");
@@ -56,24 +84,25 @@ void Client::Run(void)
 void Client::NotifyFileChange(const string& path, const FileSystemWatcher::FileStatus fs)
 {
     string debugStr; //TMP string.
+    //Since a SharedSet object encapsulates a set, the elements will be inserted in order.
     switch(fs)
     {
         case FileSystemWatcher::FileStatus::FS_Created:
             debugStr = "Creato";
-            this->filesToCreateList.push_back(path);
+            this->filesToCreateSet.Insert(path);
             break;
         case FileSystemWatcher::FileStatus::FS_Modified:
             debugStr = "Modificato";
-            this->filesToModifyList.push_back(path);
+            this->filesToModifySet.Insert(path);
             break;
         case FileSystemWatcher::FileStatus::FS_Erased:
             debugStr = "Cancellato";
-            this->filesToDeleteList.push_back(path);
+            this->filesToDeleteSet.Insert(path);
             break;
         default:
             return;
     }
-    cout << "[DEBUG] Client::NotifyFileChange --> path = " << path << "\n\tStatus = " << debugStr <<  endl;
+    //cout << "[DEBUG] Client::NotifyFileChange --> path = " << path << "\n\tStatus = " << debugStr << endl;
 }
 #pragma endregion
 
@@ -118,27 +147,30 @@ void Client::DoLogin(void)
     this->receivedMex = "";
 }
 
-std::unordered_map<string,string> Client::GetDigestsFromServer(void)
+unordered_map<string,string> Client::GetDigestsFromServer(void)
 {
-    std::unordered_map<string,string> digestMap;
+    unordered_map<string,string> digestMap;
     this->mexToSend = "ACK_DIGEST";
 
     //Try to get first digest.
     this->receivedMex = utils::GetDataSynchronously(this->clientSocket.back());
-    cout << "[DEBUG] Received message: " << this->receivedMex << endl;
+    //cout << "[DEBUG] Received message: " << this->receivedMex << endl;
 
     while (this->receivedMex != "DIGESTS_LIST_EMPTY")
     {
-        //Extract the digest and the filename associated with it
-        pair<string, string> element = utils::SplitString(this->receivedMex, '\n');
-        digestMap[std::move(element.first)] = std::move(element.second);
+        //Extract filename and its digest
+        pair<string, string> split = utils::SplitString(this->receivedMex, '\n');
+        string filepath = std::move(split.first);
+        string digest = std::move(split.second);
+        //Store information
+        digestMap[std::move(filepath)] = std::move(digest);
 
         //Send ACK
         utils::SendDataSynchronously(this->clientSocket.back(), mexToSend);
 
-        //Try to get an another digest.
+        //Try to get an another digest
         this->receivedMex = utils::GetDataSynchronously(this->clientSocket.back());
-        cout << "[DEBUG] Received message: " << this->receivedMex << endl;
+        //cout << "[DEBUG] Received message: " << this->receivedMex << endl;
     }
     return digestMap;
 }
