@@ -6,7 +6,6 @@
 #include <fstream>
 #include <iomanip>
 #include <experimental/filesystem>
-#include <boost/bind.hpp>
 #include <boost/algorithm/string.hpp>
 #include <openssl/sha.h>
 #include <list>
@@ -15,6 +14,10 @@ using std::list;
 using namespace DAO;
 using namespace boost::asio;
 namespace fs = std::experimental::filesystem;
+
+#ifndef DELIMITATOR
+#define DELIMITATOR     "§DELIMITATOR§"
+#endif
 
 #pragma region Static public members:
 TCP_Connection::pointer TCP_Connection::Create(boost::asio::io_context& io_context)
@@ -48,9 +51,9 @@ void TCP_Connection::Start(void)
 #pragma endregion
 
 #pragma region Private members:
-TCP_Connection::TCP_Connection(boost::asio::io_context& io_context) : socketServer(io_context), failedLoginAttempts(0)
+TCP_Connection::TCP_Connection(boost::asio::io_context& io_context) :
+    socketServer(io_context), failedLoginAttempts(0)
 {
-    this->associatedUserID = "";
 }
 
 void TCP_Connection::Disconnect(void)
@@ -70,6 +73,9 @@ void TCP_Connection::ManageConnection(void)
     //A new connection has been established:
     if (this->associatedUserID.empty() == false)
     {
+        //Wait for ACK after to AUTHENTICATED message.
+        this->incomingMessage = utils::GetDataSynchronously(this->socketServer);
+
         //Set folder associated to logged user.
         this->userFolder = USERS_PATH + this->associatedUserID;
 
@@ -77,24 +83,49 @@ void TCP_Connection::ManageConnection(void)
         this->CheckSynchronization();
 
         //TODO - Incoming files
-        pair<string, string> receivedMexPair;
+        vector<string> receivedMexSubstrings;
+        this->outgoingMessage = "ACK";
         do
         {
             //Get a command from the client
+            this->incomingMessage.clear(); //Reset incoming message.
             this->incomingMessage = utils::GetDataSynchronously(this->socketServer);
-            //std::cout << "[DEBUG] Received " << this->incomingMessage << std::endl;
-            receivedMexPair = utils::SplitString(this->incomingMessage, ' ');
+            receivedMexSubstrings = utils::GetSubstrings(this->incomingMessage, DELIMITATOR);
+            std::cout << "[DEBUG] Received\n";
+            for (auto const & it : receivedMexSubstrings)
+                std::cout << "\t" << it << std::endl;
 
             //Deleting a path
-            if (receivedMexPair.first == "RM")
+            if (receivedMexSubstrings[0] == "RM")
             {
-                const string pathToRemove = this->userFolder + receivedMexPair.second;
+                const string pathToRemove = this->userFolder + receivedMexSubstrings[1];
                 if (fs::exists(pathToRemove) == true)
                     fs::remove(pathToRemove); //Perform deletion.
             }
 
             //Adding a path
-            //TODO
+            if (receivedMexSubstrings[0] == "NEW_DIR")
+            {
+                fs::create_directory(this->userFolder + receivedMexSubstrings[1]);
+            }
+            else if (receivedMexSubstrings[0] == "FILE")
+            {
+                std::ofstream outputFile;
+                if (receivedMexSubstrings[1] == "NEW")
+                    outputFile.open(this->userFolder + receivedMexSubstrings[2], std::ios::out | std::ios::binary);
+                else if (receivedMexSubstrings[1] == "APPEND")
+                    outputFile.open(this->userFolder + receivedMexSubstrings[2], std::ios::app | std::ios::binary);
+                if (outputFile.is_open() == true)
+                {
+                    std::cout << receivedMexSubstrings[3] << std::endl;
+                    outputFile.write(receivedMexSubstrings[3].c_str(), receivedMexSubstrings[3].length());
+                    outputFile.clear();
+                    outputFile.close();
+                }
+            }
+
+            //Sent ACK - It says to client that server has received a message and so it's ready to get a new one.
+            utils::SendDataSynchronously(this->socketServer, this->outgoingMessage);
         }   while (this->incomingMessage != "EXIT" && this->outgoingMessage != "EXIT");
     }
 }
@@ -128,7 +159,7 @@ void TCP_Connection::CheckSynchronization(void)
     {
         //Get an element from the list of digests.
         auto const& digest_iterator = digestList.front();
-        this->outgoingMessage = digest_iterator.first + "\n" + digest_iterator.second;
+        this->outgoingMessage = digest_iterator.first + DELIMITATOR + digest_iterator.second;
 
         //Send a message to client
         utils::SendDataSynchronously(this->socketServer, this->outgoingMessage);
@@ -142,8 +173,10 @@ void TCP_Connection::CheckSynchronization(void)
         //Remove element from the list.
         digestList.pop_front();
     }
+
     //There are no further digests to send.
     this->outgoingMessage = "DIGESTS_LIST_EMPTY";
+
     //Send a message to client
     utils::SendDataSynchronously(this->socketServer, this->outgoingMessage);
 }
@@ -199,7 +232,7 @@ bool TCP_Connection::CheckLoginCredentials(void)
             const string userSalt = userInfomation.second.GetSalt();
             userPassword.append(userSalt);
             //Compute hash(psw || salt) using SHA512 as hash algorithm
-            unsigned char computedHashPassword[SHA512_DIGEST_LENGTH];
+            unsigned char computedHashPassword[SHA512_DIGEST_LENGTH]{};
             SHA512(reinterpret_cast<const unsigned char*>(userPassword.c_str()), userPassword.size(), computedHashPassword);
 
             //Hash converted to string
@@ -222,19 +255,5 @@ bool TCP_Connection::CheckLoginCredentials(void)
 
     //Wrong username and/or password
     return false;
-}
-
-void TCP_Connection::HandleReadFile(const boost::system::error_code& error, size_t bytes_transferred)
-{
-    //TMP
-    std::ofstream ofs;
-    ofs.open("txtServer.txt", std::ios::app);
-    if (ofs.is_open() == true)
-    {
-        /*std::cout << this->incomingMessage << std::endl;*/
-        ofs << this->incomingMessage;
-    }
-    ofs.close();
-    std::cout << "[DEBUG] End of file transfer" << std::endl;
 }
 #pragma endregion

@@ -2,6 +2,7 @@
 
 #include "FileSystemWatcher/file_system_watcher.h"
 #include "../Common/SharedSet/shared_set.hpp"
+#include "../Common/SharedMap/shared_map.hpp"
 
 #include <boost/asio.hpp>
 #include <string>
@@ -35,10 +36,9 @@ private:
     string pathToWatch;
 
     //More threads can access to these attribures respecting the RAII paradigm.
-    //Since a SharedSet object encapsulates a set, the elements will be inserted in order.
+    //Since a SharedSet object encapsulates a set, the elements will be inserted in order. Similarly for a SharedMap.
     SharedSet<string> filesToDeleteSet;
-    SharedSet<string> filesToCreateSet;
-    SharedSet<string> filesToModifySet;
+    SharedMap<string, pair<ssize_t,ssize_t>> filesToSendMap;
 
     #pragma region Private members:
     void DoLogin(void);

@@ -31,7 +31,6 @@ private:
     void CheckSynchronization(void);
     void DoLogin(void);
     [[nodiscard]] bool CheckLoginCredentials(void);
-    void HandleReadFile(const boost::system::error_code& error, size_t bytes_transferred);
 
     const string USERS_PATH = "./Users/";
     ///The socket used for network comunications.

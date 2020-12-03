@@ -28,6 +28,7 @@ add_executable(
         ./Common/ThreadGuard/thread_guard.cpp
         ./Common/SharedList/shared_list.hpp
         ./Common/SharedSet/shared_set.hpp
+        ./Common/SharedMap/shared_map.hpp
         ./Common/Utils/utils.cpp
 )
 add_executable(

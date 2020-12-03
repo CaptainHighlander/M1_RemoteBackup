@@ -10,6 +10,14 @@ using std::cout;
 using std::cin;
 using std::endl;
 
+#ifndef BUFFER_SIZE
+#define BUFFER_SIZE 1024
+#endif
+
+#ifndef DELIMITATOR
+#define DELIMITATOR     "§DELIMITATOR§"
+#endif
+
 #pragma region Constructor:
 Client::Client(const string& _address, const uint16_t _port)
     : address(_address), port(_port), bIsAuthenticated(false)
@@ -40,7 +48,6 @@ void Client::Run(void)
         FileSystemWatcher fsw { pathToWatch, this->GetDigestsFromServer(), fswActionFunc };
         fsw.StartWatch();
 
-        //TODO - Outgoing files
         do
         {
             //Communicates the paths to be deleted
@@ -50,28 +57,58 @@ void Client::Run(void)
                 std::optional<string> pathToDelete = this->filesToDeleteSet.Extract();
                 if (pathToDelete.has_value() == true)
                 {
-                    this->mexToSend = "RM " + pathToDelete.value();
+                    this->mexToSend = string("RM") + DELIMITATOR + pathToDelete.value();
                     //std::cout << "[DEBUG] Sending " << this->mexToSend << std::endl;
                     utils::SendDataSynchronously(this->clientSocket.back(), this->mexToSend);
+                    //Wait for ACK.
+                    this->receivedMex = utils::GetDataSynchronously(this->clientSocket.back());
                 }
             }
 
-            //Communicates the paths to be modified
-            for (auto const& it : this->filesToModifySet)
+            //Communicates the paths to be added
+            for (auto const& it : this->filesToSendMap)
             {
-                //TODO
-                //std::cout << it << std::endl;
-                //this->filesToModifySet.Remove(it);
-            }
+                const string pathName = it.first;
+                ssize_t totalBytesSent = it.second.first;
+                const ssize_t totalBytesToSent = it.second.second;
+                //std::cout << "[DEBUG] " << pathName << "\n\t" << totalBytesSent << " | " << totalBytesToSent << std::endl;
 
-            //Communicates the paths to be created
-            for (auto const& it : this->filesToCreateSet)
-            {
-                //TODO
-                //std::cout << it << std::endl;
-                //this->filesToCreateSet.Remove(it);
+                if (totalBytesToSent <= -1) //Communicates the paths of the folder to be created
+                {
+                    this->mexToSend = string("NEW_DIR") + DELIMITATOR + pathName;
+                    utils::SendDataSynchronously(this->clientSocket.back(), this->mexToSend);
+                }
+                else //Send a file chunk by chunk
+                {
+                    //Set a buffer having an appropriate size
+                    const size_t bufferSize = ((totalBytesToSent - totalBytesSent) >= BUFFER_SIZE) ? BUFFER_SIZE : (totalBytesToSent - totalBytesSent);
+
+                    //Set message to send before the chunk of the current file.
+                    if (totalBytesSent > 0)
+                        this->mexToSend = string("FILE") + DELIMITATOR + string("APPEND") + DELIMITATOR + pathName + DELIMITATOR;
+                    else
+                        this->mexToSend = string("FILE") + DELIMITATOR + string("NEW") + DELIMITATOR + pathName + DELIMITATOR;
+
+                    //Send a chunk of the current file
+                    const ssize_t bytesSent = utils::SendFile(this->clientSocket.back(), this->pathToWatch + pathName, bufferSize, totalBytesSent, this->mexToSend);
+                    if (bytesSent > -1) //A new portion of the current file has been sent.
+                    {
+                        //Update info about the current file.
+                        totalBytesSent += bytesSent;
+                        this->filesToSendMap.InsertOrUpdate(pathName, std::make_pair(totalBytesSent, totalBytesToSent));
+                    }
+                }
+
+                //Wait for ACK
+                this->receivedMex = utils::GetDataSynchronously(this->clientSocket.back());
+
+                //Check if a folder has been sent or if a file has TOTALLY been sent.
+                if (totalBytesSent >= totalBytesToSent)
+                {
+                    //Remove folder/file from the map because server now has it
+                    this->filesToSendMap.Remove(pathName);
+                }
             }
-            //utils::SendFile(this->clientSocket.back(), this->pathToWatch + path);
         }
         while (this->receivedMex != "EXIT" && this->mexToSend != "EXIT");
     }
@@ -81,28 +118,26 @@ void Client::Run(void)
     }
 }
 
-void Client::NotifyFileChange(const string& path, const FileSystemWatcher::FileStatus fs)
+void Client::NotifyFileChange(const string& path, const FileSystemWatcher::FileStatus fileStatus)
 {
-    string debugStr; //TMP string.
-    //Since a SharedSet object encapsulates a set, the elements will be inserted in order.
-    switch(fs)
+    const string fullPath = this->pathToWatch + path;
+    //The size of the file or -1 if the path corresponds to a folder.
+    ssize_t sizeOfFile;
+    if (fileStatus != FileSystemWatcher::FileStatus::FS_Erased)
+        sizeOfFile = (fs::is_directory(fullPath) == false) ? fs::file_size(fullPath) : -1;
+
+    switch (fileStatus)
     {
         case FileSystemWatcher::FileStatus::FS_Created:
-            debugStr = "Creato";
-            this->filesToCreateSet.Insert(path);
-            break;
         case FileSystemWatcher::FileStatus::FS_Modified:
-            debugStr = "Modificato";
-            this->filesToModifySet.Insert(path);
+            this->filesToSendMap.InsertOrUpdate(path, std::make_pair(0, sizeOfFile));
             break;
         case FileSystemWatcher::FileStatus::FS_Erased:
-            debugStr = "Cancellato";
             this->filesToDeleteSet.Insert(path);
             break;
         default:
             return;
     }
-    //cout << "[DEBUG] Client::NotifyFileChange --> path = " << path << "\n\tStatus = " << debugStr << endl;
 }
 #pragma endregion
 
@@ -128,6 +163,9 @@ void Client::DoLogin(void)
         {
             cout << "Successful login" << endl;
             this->bIsAuthenticated = true;
+            //Send ACK
+            this->mexToSend = "ACK";
+            utils::SendDataSynchronously(this->clientSocket.back(), this->mexToSend);
         }
 
         bFirstContinuationCondition = this->receivedMex != "EXIT" && this->receivedMex != "ACCESS DENIED" && this->bIsAuthenticated == false;
@@ -159,9 +197,10 @@ unordered_map<string,string> Client::GetDigestsFromServer(void)
     while (this->receivedMex != "DIGESTS_LIST_EMPTY")
     {
         //Extract filename and its digest
-        pair<string, string> split = utils::SplitString(this->receivedMex, '\n');
-        string filepath = std::move(split.first);
-        string digest = std::move(split.second);
+        vector<string> split = utils::GetSubstrings(this->receivedMex, DELIMITATOR);
+        string filepath = split[0];
+        string digest = split[1];
+
         //Store information
         digestMap[std::move(filepath)] = std::move(digest);
 

@@ -1,10 +1,12 @@
 #pragma once
 
 #include <string>
+#include <vector>
 #include <boost/asio.hpp>
 
 using namespace boost::asio;
 using namespace boost::asio::ip;
+using std::vector;
 using std::string;
 using std::pair;
 using std::optional;
@@ -18,12 +20,12 @@ namespace utils
     void EraseSubStr(string& mainStr, const string& toErase);
 
     //Split a string into two substrings.
-    [[nodiscard]] pair<string,string> SplitString(const string& str, const char delimitator);
+    [[nodiscard]] pair<string,string> SplitString(const string& str, const string& delimitator);
 
-    [[nodiscard]] size_t GetFileSize(std::fstream& fs);
+    [[nodiscard]] vector<string> GetSubstrings(string str, const string& delimitator);
 
     void SendDataSynchronously(tcp::socket& socket, const string& message);
     [[nodiscard]]string GetDataSynchronously(tcp::socket& socket);
 
-    void SendFile(tcp::socket& socket, const string& namePath);
+    [[nodiscard]] ssize_t SendFile(tcp::socket& socket, const string& fileToSendPath, const size_t bufferSize, const size_t cursorPos, const string& mexToPreAppend);
 }

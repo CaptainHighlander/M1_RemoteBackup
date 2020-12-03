@@ -21,7 +21,7 @@ namespace utils
             return "";
 
         /* Computation of the digest */
-        char block[SHA512_CBLOCK];
+        char block[SHA512_CBLOCK]{};
         SHA512_CTX mdContext;
         if (SHA512_Init(&mdContext) == false)
             return std::nullopt;
@@ -34,14 +34,16 @@ namespace utils
                 file.read(block, sizeof(block));
                 if(SHA512_Update(&mdContext, block, file.gcount()) == false)
                 {
+                    file.clear();
                     file.close();
                     return std::nullopt;
                 }
             }
+            file.clear();
             file.close();
 
             //Get final digest.
-            unsigned char digest[SHA512_DIGEST_LENGTH];
+            unsigned char digest[SHA512_DIGEST_LENGTH]{};
             if (SHA512_Final(digest, &mdContext) == false)
                 return std::nullopt;
 
@@ -68,30 +70,34 @@ namespace utils
         }
     }
 
-    pair<string,string> SplitString(const string& str, const char delimitator)
+    pair<string,string> SplitString(const string& str, const string& delimitator)
     {
         string firstStr;
         string secondStr;
 
-        const size_t pos = str.find_first_of(delimitator);
+        const size_t pos = str.find(delimitator);
         if (pos != string::npos)
         {
             firstStr = str.substr(0, pos);
-            secondStr = str.substr(pos + 1);
+            secondStr = str.substr(pos + delimitator.length());
         }
         return std::make_pair(firstStr, secondStr);
     }
 
-    size_t GetFileSize(std::ifstream& fs)
+    vector<string> GetSubstrings(string str, const string& delimitator)
     {
-        size_t length = 0;
-        if(fs)
+        vector<string> substrings;
+
+        size_t pos = 0;
+        string token;
+        while ((pos = str.find(delimitator)) != std::string::npos)
         {
-            fs.seekg(0, std::ifstream::end);
-            length = fs.tellg();
-            fs.seekg(0, std::ifstream::beg);
+            token = str.substr(0, pos);
+            substrings.push_back(token);
+            str.erase(0, pos + delimitator.length());
         }
-        return length;
+        substrings.push_back(str);
+        return substrings;
     }
 
     void SendDataSynchronously(tcp::socket& socket, const string& message)
@@ -109,40 +115,41 @@ namespace utils
         return data;
     }
 
-    void SendFile(tcp::socket& socket, const string& namePath)
+    [[nodiscard]] ssize_t SendFile(tcp::socket& socket, const string& fileToSendPath, const size_t bufferSize, const size_t cursorPos, const string& mexToPreAppend)
     {
-        if (fs::exists(namePath) == false)
-            return;
-        if (fs::is_directory(namePath) == true)
-            return;
+        ssize_t bytesRead = -1;
+
+        if (fs::exists(fileToSendPath) == false)
+            return bytesRead;
+        if (fs::is_directory(fileToSendPath) == true)
+            return bytesRead;
 
         //Open file.
-        std::ifstream ifs(namePath, std::ios::in | std::ios::binary);
+        std::ifstream ifs(fileToSendPath, std::ios::in | std::ios::binary);
         if (ifs.is_open() == false)
-            return;
-        std::ofstream TmpSaveFile("cpp-output", std::ios::out | std::ios::binary);
-        if (TmpSaveFile.is_open() == false)
-        {
-            ifs.close();
-            return;
-        }
+            return bytesRead;
+        std::ofstream ofs("cpp-output", std::ios::app | std::ios::binary);
 
-        //Get file size.
-        const size_t length = utils::GetFileSize(ifs);
+        //Move file cursor to the wanted chunk.
+        ifs.seekg(cursorPos, std::ifstream::beg);
+
         //Allocate a buffer.
-        char* buffer = new char[length + 1];
-        //Read file in block.
-        ifs.read(buffer, length);
-        if (ifs.good() == true)
+        char chunk[bufferSize + 1];
+
+        //Read a chunk of the file.
+        ifs.read(chunk, bufferSize);
+        if (ifs.good() == true) //If was correctly read a number of characters equal to the buffer size.
         {
-            buffer[length] = '\0';
-            TmpSaveFile.write(buffer, length);
+            bytesRead = ifs.gcount();
+            chunk[bytesRead + 1] = '\0';
+            utils::SendDataSynchronously(socket, mexToPreAppend + chunk);
+            ofs.write(chunk, bytesRead);
         }
 
-        //Close files and pay memory debt.
+        //Close file and pay memory debt.
+        ifs.clear();
         ifs.close();
-        TmpSaveFile.close();
-        delete[] buffer;
-        buffer = nullptr;
+
+        return bytesRead;
     }
 }
