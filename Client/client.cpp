@@ -1,18 +1,12 @@
 #include "client.h"
 #include <iostream>
-#include <boost/asio.hpp>
+
 #include "../Common/Utils/utils.h"
 
-using namespace boost::asio;
-using namespace boost::asio::ip;
 using std::string;
 using std::cout;
 using std::cin;
 using std::endl;
-
-#ifndef BUFFER_SIZE
-#define BUFFER_SIZE 1024
-#endif
 
 #ifndef DELIMITATOR
 #define DELIMITATOR     "§DELIMITATOR§"
@@ -48,6 +42,7 @@ void Client::Run(void)
         FileSystemWatcher fsw { pathToWatch, this->GetDigestsFromServer(), fswActionFunc };
         fsw.StartWatch();
 
+        /* OUTGOING COMMANDS */
         do
         {
             //Communicates the paths to be deleted
@@ -59,9 +54,9 @@ void Client::Run(void)
                 {
                     this->mexToSend = string("RM") + DELIMITATOR + pathToDelete.value();
                     //std::cout << "[DEBUG] Sending " << this->mexToSend << std::endl;
-                    utils::SendDataSynchronously(this->clientSocket.back(), this->mexToSend);
+                    utils::SendStringSynchronously(this->clientSocket.back(), this->mexToSend);
                     //Wait for ACK.
-                    this->receivedMex = utils::GetDataSynchronously(this->clientSocket.back());
+                    this->receivedMex = utils::GetStringSynchronously(this->clientSocket.back());
                 }
             }
 
@@ -76,22 +71,28 @@ void Client::Run(void)
                 if (totalBytesToSent <= -1) //Communicates the paths of the folder to be created
                 {
                     this->mexToSend = string("NEW_DIR") + DELIMITATOR + pathName;
-                    utils::SendDataSynchronously(this->clientSocket.back(), this->mexToSend);
+                    utils::SendStringSynchronously(this->clientSocket.back(), this->mexToSend);
                 }
                 else //Send a file chunk by chunk
                 {
                     //Set a buffer having an appropriate size
-                    const size_t bufferSize = ((totalBytesToSent - totalBytesSent) >= BUFFER_SIZE) ? BUFFER_SIZE : (totalBytesToSent - totalBytesSent);
+                    const size_t bytesToRead = ((totalBytesToSent - totalBytesSent) >= BUFFER_SIZE) ? BUFFER_SIZE : (totalBytesToSent - totalBytesSent);
 
-                    //Set message to send before the chunk of the current file.
+                    //Set message to send before the chunk of the current file and wait for an ack.
+                    //This message provides the following information:
+                    //1) the name of the file;
+                    //2) if the file have to be created or if the chunk will be appended.
+                    //3) the size of the chunk.
                     if (totalBytesSent > 0)
-                        this->mexToSend = string("FILE") + DELIMITATOR + string("APPEND") + DELIMITATOR + pathName + DELIMITATOR;
+                        this->mexToSend = string("FILE") + DELIMITATOR + string("APPEND") + DELIMITATOR + pathName + DELIMITATOR + std::to_string(bytesToRead);
                     else
-                        this->mexToSend = string("FILE") + DELIMITATOR + string("NEW") + DELIMITATOR + pathName + DELIMITATOR;
+                        this->mexToSend = string("FILE") + DELIMITATOR + string("NEW") + DELIMITATOR + pathName + DELIMITATOR + std::to_string(bytesToRead);
+                    utils::SendStringSynchronously(this->clientSocket.back(), this->mexToSend);
+                    this->receivedMex = utils::GetStringSynchronously(this->clientSocket.back()); //Wait for ACK.
 
                     //Send a chunk of the current file
-                    const ssize_t bytesSent = utils::SendFile(this->clientSocket.back(), this->pathToWatch + pathName, bufferSize, totalBytesSent, this->mexToSend);
-                    if (bytesSent > -1) //A new portion of the current file has been sent.
+                    const ssize_t bytesSent = utils::SendFile(this->clientSocket.back(), this->pathToWatch + pathName, totalBytesSent);
+                    if (bytesSent > (-1)) //A new portion of the current file has been sent.
                     {
                         //Update info about the current file.
                         totalBytesSent += bytesSent;
@@ -100,7 +101,7 @@ void Client::Run(void)
                 }
 
                 //Wait for ACK
-                this->receivedMex = utils::GetDataSynchronously(this->clientSocket.back());
+                this->receivedMex = utils::GetStringSynchronously(this->clientSocket.back());
 
                 //Check if a folder has been sent or if a file has TOTALLY been sent.
                 if (totalBytesSent >= totalBytesToSent)
@@ -112,7 +113,7 @@ void Client::Run(void)
         }
         while (this->receivedMex != "EXIT" && this->mexToSend != "EXIT");
     }
-    catch (std::exception& e)
+    catch (const std::exception& e)
     {
         std::cerr << "Exception\n\t" << e.what() << endl;
     }
@@ -150,7 +151,7 @@ void Client::DoLogin(void)
         this->bIsAuthenticated = false;
 
         //Fetching a mex from the server.
-        this->receivedMex = utils::GetDataSynchronously(this->clientSocket.back());
+        this->receivedMex = utils::GetStringSynchronously(this->clientSocket.back());
         cout << "[DEBUG] Received message: " << this->receivedMex << endl;
 
         if (this->receivedMex == "AUTH REQUEST")
@@ -165,7 +166,7 @@ void Client::DoLogin(void)
             this->bIsAuthenticated = true;
             //Send ACK
             this->mexToSend = "ACK";
-            utils::SendDataSynchronously(this->clientSocket.back(), this->mexToSend);
+            utils::SendStringSynchronously(this->clientSocket.back(), this->mexToSend);
         }
 
         bFirstContinuationCondition = this->receivedMex != "EXIT" && this->receivedMex != "ACCESS DENIED" && this->bIsAuthenticated == false;
@@ -174,7 +175,7 @@ void Client::DoLogin(void)
             //Reading new message from input stream
             getline(cin, this->mexToSend);
             //Send mex to server
-            utils::SendDataSynchronously(this->clientSocket.back(), this->mexToSend);
+            utils::SendStringSynchronously(this->clientSocket.back(), this->mexToSend);
         }
         else if (this->bIsAuthenticated == false)
             cout << "Connection terminated" << endl;
@@ -191,7 +192,7 @@ unordered_map<string,string> Client::GetDigestsFromServer(void)
     this->mexToSend = "ACK_DIGEST";
 
     //Try to get first digest.
-    this->receivedMex = utils::GetDataSynchronously(this->clientSocket.back());
+    this->receivedMex = utils::GetStringSynchronously(this->clientSocket.back());
     //cout << "[DEBUG] Received message: " << this->receivedMex << endl;
 
     while (this->receivedMex != "DIGESTS_LIST_EMPTY")
@@ -205,10 +206,10 @@ unordered_map<string,string> Client::GetDigestsFromServer(void)
         digestMap[std::move(filepath)] = std::move(digest);
 
         //Send ACK
-        utils::SendDataSynchronously(this->clientSocket.back(), mexToSend);
+        utils::SendStringSynchronously(this->clientSocket.back(), mexToSend);
 
         //Try to get an another digest
-        this->receivedMex = utils::GetDataSynchronously(this->clientSocket.back());
+        this->receivedMex = utils::GetStringSynchronously(this->clientSocket.back());
         //cout << "[DEBUG] Received message: " << this->receivedMex << endl;
     }
     return digestMap;

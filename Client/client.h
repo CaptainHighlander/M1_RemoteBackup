@@ -11,6 +11,7 @@ using namespace boost::asio;
 using namespace boost::asio::ip;
 using std::string;
 using std::pair;
+using std::array;
 using std::unordered_map;
 
 class Client

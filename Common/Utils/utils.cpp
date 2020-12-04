@@ -88,7 +88,7 @@ namespace utils
     {
         vector<string> substrings;
 
-        size_t pos = 0;
+        size_t pos;
         string token;
         while ((pos = str.find(delimitator)) != std::string::npos)
         {
@@ -100,12 +100,12 @@ namespace utils
         return substrings;
     }
 
-    void SendDataSynchronously(tcp::socket& socket, const string& message)
+    void SendStringSynchronously(tcp::socket& socket, const string& message)
     {
         write(socket, buffer(message + "\n"));
     }
 
-    string GetDataSynchronously(tcp::socket& socket)
+    string GetStringSynchronously(tcp::socket& socket)
     {
         boost::asio::streambuf buf;
         read_until(socket, buf, '\n');
@@ -115,7 +115,17 @@ namespace utils
         return data;
     }
 
-    [[nodiscard]] ssize_t SendFile(tcp::socket& socket, const string& fileToSendPath, const size_t bufferSize, const size_t cursorPos, const string& mexToPreAppend)
+    void SendBytesSynchronously(tcp::socket& socket, const char bufferByte[], const size_t bufferSize)
+    {
+        write(socket, buffer(bufferByte, bufferSize));
+    }
+
+    ssize_t GetBytesSynchronously(tcp::socket& socket, char bufferOfBytes[], const size_t bufferSize)
+    {
+        return read(socket, buffer(bufferOfBytes, bufferSize));
+    }
+
+    [[nodiscard]] ssize_t SendFile(tcp::socket& socket, const string& fileToSendPath, const size_t cursorPos)
     {
         ssize_t bytesRead = -1;
 
@@ -128,25 +138,23 @@ namespace utils
         std::ifstream ifs(fileToSendPath, std::ios::in | std::ios::binary);
         if (ifs.is_open() == false)
             return bytesRead;
-        std::ofstream ofs("cpp-output", std::ios::app | std::ios::binary);
 
         //Move file cursor to the wanted chunk.
         ifs.seekg(cursorPos, std::ifstream::beg);
 
         //Allocate a buffer.
-        char chunk[bufferSize + 1];
+        char chunk[BUFFER_SIZE + 1] = { '\0' };
 
         //Read a chunk of the file.
-        ifs.read(chunk, bufferSize);
-        if (ifs.good() == true) //If was correctly read a number of characters equal to the buffer size.
+        ifs.read(chunk, BUFFER_SIZE);
+        bytesRead = ifs.gcount();
+        if (bytesRead > 0)
         {
-            bytesRead = ifs.gcount();
-            chunk[bytesRead + 1] = '\0';
-            utils::SendDataSynchronously(socket, mexToPreAppend + chunk);
-            ofs.write(chunk, bytesRead);
+            chunk[bytesRead] = '\0';
+            utils::SendBytesSynchronously(socket, chunk, bytesRead);
         }
 
-        //Close file and pay memory debt.
+        //Clear flags and close file.
         ifs.clear();
         ifs.close();
 

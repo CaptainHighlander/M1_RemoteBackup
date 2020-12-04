@@ -1,6 +1,5 @@
 #include "tcp_connection.h"
 #include "Database/DAO/dao.h"
-#include "../Common/Utils/utils.h"
 
 #include <iostream> //TMP, only for debug.
 #include <fstream>
@@ -74,7 +73,7 @@ void TCP_Connection::ManageConnection(void)
     if (this->associatedUserID.empty() == false)
     {
         //Wait for ACK after to AUTHENTICATED message.
-        this->incomingMessage = utils::GetDataSynchronously(this->socketServer);
+        this->incomingMessage = utils::GetStringSynchronously(this->socketServer);
 
         //Set folder associated to logged user.
         this->userFolder = USERS_PATH + this->associatedUserID;
@@ -82,14 +81,14 @@ void TCP_Connection::ManageConnection(void)
         //Check if the folder associated to the connected user has the same files that are in the folder client-side.
         this->CheckSynchronization();
 
-        //TODO - Incoming files
+        /* INCOMING COMMANDS */
         vector<string> receivedMexSubstrings;
         this->outgoingMessage = "ACK";
         do
         {
             //Get a command from the client
             this->incomingMessage.clear(); //Reset incoming message.
-            this->incomingMessage = utils::GetDataSynchronously(this->socketServer);
+            this->incomingMessage = utils::GetStringSynchronously(this->socketServer);
             receivedMexSubstrings = utils::GetSubstrings(this->incomingMessage, DELIMITATOR);
             std::cout << "[DEBUG] Received\n";
             for (auto const & it : receivedMexSubstrings)
@@ -111,21 +110,30 @@ void TCP_Connection::ManageConnection(void)
             else if (receivedMexSubstrings[0] == "FILE")
             {
                 std::ofstream outputFile;
+
+                //Open file using info provided by the client.
                 if (receivedMexSubstrings[1] == "NEW")
-                    outputFile.open(this->userFolder + receivedMexSubstrings[2], std::ios::out | std::ios::binary);
+                    outputFile.open(this->userFolder + receivedMexSubstrings[2], std::ios_base::binary | std::ios_base::out);
                 else if (receivedMexSubstrings[1] == "APPEND")
-                    outputFile.open(this->userFolder + receivedMexSubstrings[2], std::ios::app | std::ios::binary);
-                if (outputFile.is_open() == true)
+                    outputFile.open(this->userFolder + receivedMexSubstrings[2], std::ios_base::binary | std::ios_base::app);
+
+                //Send READY
+                utils::SendStringSynchronously(this->socketServer, "READY");
+
+                //Get a chunk of the file and save it.
+                const size_t byteToRead = std::stoi(receivedMexSubstrings[3]);
+                const ssize_t byteRead = utils::GetBytesSynchronously(this->socketServer, this->byteBuffer.data(), byteToRead);
+                if (outputFile.is_open() == true && byteRead == byteToRead)
                 {
-                    std::cout << receivedMexSubstrings[3] << std::endl;
-                    outputFile.write(receivedMexSubstrings[3].c_str(), receivedMexSubstrings[3].length());
+                    outputFile.write(this->byteBuffer.data(), byteRead);
+                    //Clear flags and close the file.
                     outputFile.clear();
                     outputFile.close();
                 }
             }
 
-            //Sent ACK - It says to client that server has received a message and so it's ready to get a new one.
-            utils::SendDataSynchronously(this->socketServer, this->outgoingMessage);
+            //Send ACK - It says to client that server has received a message and so it's ready to get a new one.
+            utils::SendStringSynchronously(this->socketServer, this->outgoingMessage);
         }   while (this->incomingMessage != "EXIT" && this->outgoingMessage != "EXIT");
     }
 }
@@ -162,12 +170,12 @@ void TCP_Connection::CheckSynchronization(void)
         this->outgoingMessage = digest_iterator.first + DELIMITATOR + digest_iterator.second;
 
         //Send a message to client
-        utils::SendDataSynchronously(this->socketServer, this->outgoingMessage);
+        utils::SendStringSynchronously(this->socketServer, this->outgoingMessage);
 
         //Wait ACK
         do
         {
-            this->incomingMessage = utils::GetDataSynchronously(this->socketServer);
+            this->incomingMessage = utils::GetStringSynchronously(this->socketServer);
         }   while (this->incomingMessage != "ACK_DIGEST");
 
         //Remove element from the list.
@@ -178,7 +186,7 @@ void TCP_Connection::CheckSynchronization(void)
     this->outgoingMessage = "DIGESTS_LIST_EMPTY";
 
     //Send a message to client
-    utils::SendDataSynchronously(this->socketServer, this->outgoingMessage);
+    utils::SendStringSynchronously(this->socketServer, this->outgoingMessage);
 }
 
 void TCP_Connection::DoLogin(void)
@@ -187,12 +195,12 @@ void TCP_Connection::DoLogin(void)
 
     this->outgoingMessage = "AUTH REQUEST";
     //Send a message to client
-    utils::SendDataSynchronously(this->socketServer, this->outgoingMessage);
+    utils::SendStringSynchronously(this->socketServer, this->outgoingMessage);
 
     while (this->associatedUserID.empty() == true && this->failedLoginAttempts <= this->MAX_NUMBER_OF_FAILED_LOGINS)
     {
         //Get a new message from the client
-        this->incomingMessage = utils::GetDataSynchronously(this->socketServer);
+        this->incomingMessage = utils::GetStringSynchronously(this->socketServer);
 
         //Verify provided credentials and provide a response to the client:
         if (this->CheckLoginCredentials() == true)
@@ -205,7 +213,7 @@ void TCP_Connection::DoLogin(void)
             this->outgoingMessage = (this->failedLoginAttempts <= this->MAX_NUMBER_OF_FAILED_LOGINS) ? "AUTH REQUEST RETRY" : "ACCESS DENIED";
         }
         //Send a message to client
-        utils::SendDataSynchronously(this->socketServer, this->outgoingMessage);
+        utils::SendStringSynchronously(this->socketServer, this->outgoingMessage);
     }
 }
 

@@ -4,6 +4,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/enable_shared_from_this.hpp>
 #include <string.h>
+#include "../Common/Utils/utils.h"
 
 using std::string;
 using boost::asio::ip::tcp;
@@ -35,6 +36,8 @@ private:
     const string USERS_PATH = "./Users/";
     ///The socket used for network comunications.
     tcp::socket socketServer;
+    ///A buffer of byte
+    std::array<char, BUFFER_SIZE> byteBuffer{};
     ///The data to be sent.
     string outgoingMessage;
     ///The data to be received.
