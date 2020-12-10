@@ -38,6 +38,7 @@ add_executable(
         ./Server/tcp_server.cpp
         ./Server/Database/DAO/dao.cpp
         ./Common/Utils/utils.cpp
+        ./Common/ThreadGuard/thread_guard.cpp
 )
 
 # Use of C++20

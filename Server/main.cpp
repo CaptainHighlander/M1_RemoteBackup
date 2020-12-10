@@ -1,6 +1,5 @@
 #include <iostream>
 #include <boost/asio.hpp>
-#include <boost/bind.hpp>
 #include "tcp_server.h"
 
 int main()
@@ -14,7 +13,6 @@ int main()
         TCP_Server server(io_context, tcp::v4(), 1996);
 
         //Run the io_context object to perform asynchronous operations. It stops main function execution.
-        std::thread t(boost::bind(&boost::asio::io_context::run, &io_context));
         io_context.run();
     }
     catch (std::exception& e)

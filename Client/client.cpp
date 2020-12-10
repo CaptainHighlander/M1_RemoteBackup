@@ -12,23 +12,55 @@ using std::endl;
 #define DELIMITATOR     "§DELIMITATOR§"
 #endif
 
+#pragma region Signal handler:
+std::function<void(int)> signalHandler = nullptr;
+void signal_handler(int i)
+{
+    signalHandler(i);
+    exit(i);
+}
+#pragma endregion
+
 #pragma region Constructor:
 Client::Client(const string& _address, const uint16_t _port)
     : address(_address), port(_port), bIsAuthenticated(false)
 {
+    signalHandler = std::bind(&Client::SignalHandler, this, std::placeholders::_1);
+    signal(SIGINT, signal_handler);
+    signal(SIGTERM, signal_handler);
+}
+
+Client::~Client(void)
+{
+    //Close the socket
+    if (this->clientSocket.empty() == false)
+        this->clientSocket.back().close();
+    std::cout << "[DEBUG] Destructor of client" << std::endl;
 }
 #pragma endregion
 
 #pragma Public members:
+void Client::SignalHandler(const int signum)
+{
+    //A clean deletion is performed.
+    this->~Client();
+}
+
 void Client::Run(void)
 {
     io_service io_service;
     //Socket creation
     this->clientSocket.push_back(ip::tcp::socket(io_service));
     //Try to connect to server
-    this->clientSocket.back().connect(tcp::endpoint(address::from_string(this->address), this->port));
+    boost::system::error_code err;
+    this->clientSocket.back().connect(tcp::endpoint(address::from_string(this->address), this->port), err);
+    if (err)
+    {
+        std::cout << "Ops, the server appears to be unvailable. Please, try later..." << std::endl;
+        return;
+    }
 
-    //Execution...
+    /**** Execution... ****/
     try
     {
         //Try to do login.
@@ -39,8 +71,8 @@ void Client::Run(void)
         //Init a file watcher checking for the synchronization between client and server
         this->pathToWatch = "./FoldersTest/Riccardo_Client";
         const FileSystemWatcher::notificationFunc fswActionFunc = std::bind(&Client::NotifyFileChange, this, std::placeholders::_1, std::placeholders::_2);
-        FileSystemWatcher fsw { pathToWatch, this->GetDigestsFromServer(), fswActionFunc };
-        fsw.StartWatch();
+        this->fsw = FileSystemWatcher::Create(pathToWatch, this->GetDigestsFromServer(), fswActionFunc);
+        fsw->StartWatch();
 
         /* OUTGOING COMMANDS */
         do

@@ -21,9 +21,11 @@ public:
     Client(const string& _address, const uint16_t _port);
     Client(Client const&) = delete;
     Client& operator=(Client const&) = delete;
+    ~Client(void);
     #pragma endregion
 
     #pragma region Public members:
+    void SignalHandler(const int signum);
     void Run(void);
     void NotifyFileChange(const std::string& path, const FileSystemWatcher::FileStatus);
     #pragma endregion
@@ -35,6 +37,7 @@ private:
     string mexToSend;
     string receivedMex;
     string pathToWatch;
+    FileSystemWatcher::FSW_up fsw;
 
     //More threads can access to these attribures respecting the RAII paradigm.
     //Since a SharedSet object encapsulates a set, the elements will be inserted in order. Similarly for a SharedMap.

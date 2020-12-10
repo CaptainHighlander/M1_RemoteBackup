@@ -1,12 +1,15 @@
 #pragma once
 
+#include "../Common/Utils/utils.h"
+
 #include <boost/asio.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/enable_shared_from_this.hpp>
 #include <string.h>
-#include "../Common/Utils/utils.h"
+#include <unordered_map>
 
 using std::string;
+using std::unordered_map;
 using boost::asio::ip::tcp;
 
 //Using shared_ptr and enable_shared_from_this
@@ -21,11 +24,17 @@ public:
     TCP_Connection& operator=(TCP_Connection const&) = delete;
     ~TCP_Connection(void);
 
-    static pointer Create(boost::asio::io_context& io_context);
-    [[nodiscard]] tcp::socket& GetSocket(void);
+    #pragma region Static members:
+    static pointer Create(tcp::socket io_context, const uint64_t id);
+    [[nodiscard]] static unordered_map<uint64_t, pointer> GetConnectionsMap(void);
+    #pragma endregion
+
+    #pragma region Public members:
     void Start(void);
+    void Close(void);
+    #pragma endregion
 private:
-    explicit TCP_Connection(boost::asio::io_context& io_context);
+    TCP_Connection(tcp::socket io_context, const uint64_t _id);
 
     void Disconnect(void);
     void ManageConnection(void);
@@ -34,6 +43,8 @@ private:
     [[nodiscard]] bool CheckLoginCredentials(void);
 
     const string USERS_PATH = "./Users/";
+    ///The connection id
+    uint64_t id;
     ///The socket used for network comunications.
     tcp::socket socketServer;
     ///A buffer of byte
@@ -46,7 +57,11 @@ private:
     string associatedUserID;
     ///The folder associated to the logged user.
     string userFolder;
+    ///Flag to indicate if the connection has to be closed.
+    bool bToClose;
 
     uint8_t failedLoginAttempts;
     const uint8_t MAX_NUMBER_OF_FAILED_LOGINS = 2;
+
+    static unordered_map<uint64_t, pointer> connectionsMap;
 };

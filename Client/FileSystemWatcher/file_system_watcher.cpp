@@ -10,15 +10,22 @@ FileSystemWatcher::FileSystemWatcher(const string& _pathToWatch, const digestsMa
     //Use the map containg the pair <fileName, digest> as initial monitored files to verify
     // if client and server are synchronized.
     this->monitoredFiles = _digestComputedByServer;
-    //Check synchronization between cliend and server.
+    //Check synchronization between client and server.
     this->CheckForSomething();
 }
 
 FileSystemWatcher::~FileSystemWatcher(void)
 {
-    std::cout << "[DEBUG] Destructor FileSystemWatcher" << std::endl;
     //If monitoring was previously started, it will stop concurrent thread.
     this->StopWatch();
+    std::cout << "[DEBUG] Destructor of FileSystemWatcher" << std::endl;
+}
+#pragma endregion
+
+#pragma region Static members:
+FileSystemWatcher::FSW_up FileSystemWatcher::Create(const string& _pathToWatch, const FileSystemWatcher::digestsMap& _digestComputedByServer, const FileSystemWatcher::notificationFunc& _action)
+{
+    return std::unique_ptr<FileSystemWatcher>(new FileSystemWatcher(_pathToWatch, _digestComputedByServer, _action));
 }
 #pragma endregion
 

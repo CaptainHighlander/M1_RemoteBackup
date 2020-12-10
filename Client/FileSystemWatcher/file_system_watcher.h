@@ -20,14 +20,17 @@ public:
     enum class FileStatus { FS_Created, FS_Modified, FS_Erased };
     typedef unordered_map<string,string> digestsMap;
     typedef std::function<void(const std::string&, FileSystemWatcher::FileStatus)> notificationFunc;
+    typedef std::unique_ptr<FileSystemWatcher> FSW_up;
 
     #pragma region Constructors and destructor:
-    FileSystemWatcher(const string& _pathToWatch, const digestsMap& _digestComputedByServer, const notificationFunc& _action);
     //We don't allow operator= because it's unnecessary.
-    //On the other hand, we need CopyConstructor since to create a thread inside the class.
-    //For now, we use automatic CopyConstructor, since it seems we don't need to overwrite it.
+    //On the other hand, we need CopyConstructor since to create a thread inside the class and so it's private.
     FileSystemWatcher& operator=(FileSystemWatcher const& other) = delete;
     ~FileSystemWatcher(void);
+    #pragma endregion
+
+    #pragma region Static members:
+    static FSW_up Create(const string& _pathToWatch, const digestsMap& _digestComputedByServer, const notificationFunc& _action);
     #pragma endregion
 
     #pragma region Public members:
@@ -35,8 +38,11 @@ public:
     void StopWatch(void);
     #pragma endregion
 private:
+    #pragma region Constructors:
+    FileSystemWatcher(const string& _pathToWatch, const digestsMap& _digestComputedByServer, const notificationFunc& _action);
     //Copy constructor
     FileSystemWatcher(FileSystemWatcher const&);
+    #pragma endregion
 
     bool bWatching;
     string pathToWatch;

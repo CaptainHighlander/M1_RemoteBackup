@@ -18,25 +18,39 @@ namespace fs = std::experimental::filesystem;
 #define DELIMITATOR     "§DELIMITATOR§"
 #endif
 
-#pragma region Static public members:
-TCP_Connection::pointer TCP_Connection::Create(boost::asio::io_context& io_context)
+#pragma region Static attributes:
+unordered_map<uint64_t, TCP_Connection::pointer> TCP_Connection::connectionsMap{};
+#pragma endregion
+
+#pragma region Constructor and destructor:
+TCP_Connection::TCP_Connection(tcp::socket io_context, const uint64_t _id)
+        :   socketServer(std::move(io_context)), failedLoginAttempts(0), id(_id), bToClose(false)
 {
-    return pointer(new TCP_Connection(io_context));
+}
+
+TCP_Connection::~TCP_Connection(void)
+{
+    TCP_Connection::connectionsMap.erase(this->id);
+    this->Disconnect();
+    std::cout << "[DEBUG] TCP_Connection --> Connection closed" << std::endl;
+}
+#pragma endregion
+
+#pragma region Static public members:
+TCP_Connection::pointer TCP_Connection::Create(tcp::socket io_context, const uint64_t id)
+{
+    auto connectionPointer = pointer(new TCP_Connection(std::move(io_context), id));
+    TCP_Connection::connectionsMap[id] = connectionPointer;
+    return connectionPointer;
+}
+
+unordered_map<uint64_t, TCP_Connection::pointer> TCP_Connection::GetConnectionsMap(void)
+{
+    return TCP_Connection::connectionsMap;
 }
 #pragma endregion
 
 #pragma region Public members:
-TCP_Connection::~TCP_Connection(void)
-{
-    this->Disconnect();
-    std::cout << "[DEBUG] Connection closed" << std::endl;
-}
-
-tcp::socket& TCP_Connection::GetSocket(void)
-{
-    return this->socketServer;
-}
-
 void TCP_Connection::Start(void)
 {
     try
@@ -47,14 +61,14 @@ void TCP_Connection::Start(void)
     {
     }
 }
+
+void TCP_Connection::Close(void)
+{
+    delete this;
+}
 #pragma endregion
 
 #pragma region Private members:
-TCP_Connection::TCP_Connection(boost::asio::io_context& io_context) :
-    socketServer(io_context), failedLoginAttempts(0)
-{
-}
-
 void TCP_Connection::Disconnect(void)
 {
     this->socketServer.close();
@@ -136,6 +150,8 @@ void TCP_Connection::ManageConnection(void)
             utils::SendStringSynchronously(this->socketServer, this->outgoingMessage);
         }   while (this->incomingMessage != "EXIT" && this->outgoingMessage != "EXIT");
     }
+    else
+        TCP_Connection::connectionsMap.erase(this->id); //Destructor will be called due to this instruction.
 }
 
 void TCP_Connection::CheckSynchronization(void)

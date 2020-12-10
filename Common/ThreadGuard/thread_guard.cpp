@@ -1,5 +1,4 @@
 #include "thread_guard.h"
-
 ThreadGuard::ThreadGuard(std::thread& _myThread)
     : myThread(_myThread)
 {
