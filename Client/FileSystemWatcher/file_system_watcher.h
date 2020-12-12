@@ -17,7 +17,7 @@ namespace fs = std::experimental::filesystem;
 class FileSystemWatcher
 {
 public:
-    enum class FileStatus { FS_Created, FS_Modified, FS_Erased };
+    enum FileStatus { FS_Created, FS_Modified, FS_Erased, FS_Error_MissingMainFolder, FS_Error_Generic };
     typedef unordered_map<string,string> digestsMap;
     typedef std::function<void(const std::string&, FileSystemWatcher::FileStatus)> notificationFunc;
     typedef std::unique_ptr<FileSystemWatcher> FSW_up;
@@ -52,7 +52,7 @@ private:
     //Each of two lists contain only an element.
     //We are using list in order to don't create a thread and a ThreadGuard before the time.
     //Indeed, if we hadn't used a list, the thread and the ThreadGuard would be instantiated during the creation
-    // of a FileSystemWatcher object.
+    //of a FileSystemWatcher object.
     list<std::thread> watchingThread;
     list<ThreadGuard> watchingThreadGuard;
 

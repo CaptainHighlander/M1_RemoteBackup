@@ -5,11 +5,10 @@
 
 #pragma region Constructors and destructor:
 FileSystemWatcher::FileSystemWatcher(const string& _pathToWatch, const digestsMap& _digestComputedByServer, const notificationFunc& _action)
-    : pathToWatch(_pathToWatch), bWatching(false), actionFunc(_action)
+    :   pathToWatch(_pathToWatch), bWatching(false), actionFunc(_action),
+        //Use the map containg the pair <fileName, digest> as initial monitored files to verifyif client and server are synchronized.
+        monitoredFiles(_digestComputedByServer)
 {
-    //Use the map containg the pair <fileName, digest> as initial monitored files to verify
-    // if client and server are synchronized.
-    this->monitoredFiles = _digestComputedByServer;
     //Check synchronization between client and server.
     this->CheckForSomething();
 }
@@ -87,28 +86,20 @@ void FileSystemWatcher::CheckForSomething(void)
         //Consider the exception
         if (fsException.path1() == this->pathToWatch)
         {
-            //TODO: Notificare al thread principale che c'è stato un problema con quella che era la cartella da monitorare.
-            //Probabilmente è stata cancellata completamente oppure ha cambiato nome.
-
-            this->bWatching = false;
-            std::cerr << "The path to be monitored wasn't found" << std::endl;
-            throw std::exception();
+            //Send a notification to the main thread in order to inform it that the folder to be monitored was not found.
+            //(i.e. it has been deleted or it has been renamed).
+            this->StopWatch();
+            this->actionFunc("", FileStatus::FS_Error_MissingMainFolder);
+            //std::cerr << "[DEBUG] FSW: The path to be monitored wasn't found" << std::endl;
         }
         //Ignore the exception
-        ;
-    }
-    catch (const boost::exception& boostException)
-    {
-        //Ignore the exception
-        ;
     }
     catch (const std::exception& e)
     {
-        //TODO: Notificare al thread principale che c'è stato un altro tipo di problema nel monitor.
-
-        this->bWatching = false;
-        std::cerr << "Exception FSW\n\t" << e.what() << std::endl;
-        throw e;
+        //Send a notification to the main thread in order to inform it that there was a problem during the monitoring.
+        this->StopWatch();
+        this->actionFunc("", FileStatus::FS_Error_Generic);
+        //std::cerr << "[DEBUG] FSW: Exception:\n\t" << e.what() << std::endl;
     }
 }
 

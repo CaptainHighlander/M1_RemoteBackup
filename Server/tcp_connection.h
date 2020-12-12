@@ -38,9 +38,10 @@ private:
 
     void Disconnect(void);
     void ManageConnection(void);
-    void CheckSynchronization(void);
     void DoLogin(void);
     [[nodiscard]] bool CheckLoginCredentials(void);
+    void CheckSynchronization(void);
+    void ManageCommunicationWithClient(void);
 
     const string USERS_PATH = "./Users/";
     ///The connection id
@@ -57,8 +58,6 @@ private:
     string associatedUserID;
     ///The folder associated to the logged user.
     string userFolder;
-    ///Flag to indicate if the connection has to be closed.
-    bool bToClose;
 
     uint8_t failedLoginAttempts;
     const uint8_t MAX_NUMBER_OF_FAILED_LOGINS = 2;

@@ -23,11 +23,13 @@ void signal_handler(int i)
 
 #pragma region Constructor:
 Client::Client(const string& _address, const uint16_t _port)
-    : address(_address), port(_port), bIsAuthenticated(false)
+    : address(_address), port(_port), bIsAuthenticated(false), errorFromFSW(0)
 {
     signalHandler = std::bind(&Client::SignalHandler, this, std::placeholders::_1);
+    //Set signals to catch.
     signal(SIGINT, signal_handler);
     signal(SIGTERM, signal_handler);
+    signal(SIGSEGV, signal_handler);
 }
 
 Client::~Client(void)
@@ -48,15 +50,10 @@ void Client::SignalHandler(const int signum)
 
 void Client::Run(void)
 {
-    io_service io_service;
-    //Socket creation
-    this->clientSocket.push_back(ip::tcp::socket(io_service));
-    //Try to connect to server
-    boost::system::error_code err;
-    this->clientSocket.back().connect(tcp::endpoint(address::from_string(this->address), this->port), err);
-    if (err)
+    //Try to establish a connection with the server.
+    if (this->ConnectToServer() == false)
     {
-        std::cout << "Ops, the server appears to be unvailable. Please, try later..." << std::endl;
+        std::cerr << "Ops, the server appears to be unvailable. Please, try later..." << std::endl;
         return;
     }
 
@@ -69,6 +66,7 @@ void Client::Run(void)
             return; //User isn't logged: client will not be able to continue it'execution. So, it's stopped.
 
         //Init a file watcher checking for the synchronization between client and server
+        //TODO Get the path fron another source (e.g. command line params, configurations file).
         this->pathToWatch = "./FoldersTest/Riccardo_Client";
         const FileSystemWatcher::notificationFunc fswActionFunc = std::bind(&Client::NotifyFileChange, this, std::placeholders::_1, std::placeholders::_2);
         this->fsw = FileSystemWatcher::Create(pathToWatch, this->GetDigestsFromServer(), fswActionFunc);
@@ -77,77 +75,37 @@ void Client::Run(void)
         /* OUTGOING COMMANDS */
         do
         {
-            //Communicates the paths to be deleted
-            while (this->filesToDeleteSet.IsEmpty() == false)
+            //Check for errors of FileSystemWatcher
+            if (this->errorFromFSW == 0) //No errors
             {
-                //Extract the next element (it will be removed from the set of file to delete).
-                std::optional<string> pathToDelete = this->filesToDeleteSet.Extract();
-                if (pathToDelete.has_value() == true)
-                {
-                    this->mexToSend = string("RM") + DELIMITATOR + pathToDelete.value();
-                    //std::cout << "[DEBUG] Sending " << this->mexToSend << std::endl;
-                    utils::SendStringSynchronously(this->clientSocket.back(), this->mexToSend);
-                    //Wait for ACK.
-                    this->receivedMex = utils::GetStringSynchronously(this->clientSocket.back());
-                }
+                //Communicates to the server the paths to be deleted
+                this->CommunicateDeletions();
+
+                //Communicates to the server if a path was added/modified and send the corrisponding file.
+                this->CommunicateCreationOrChanges();
             }
-
-            //Communicates the paths to be added
-            for (auto const& it : this->filesToSendMap)
+            else //Some errors occurs during the execution of the FileSytstemWatcher
             {
-                const string pathName = it.first;
-                ssize_t totalBytesSent = it.second.first;
-                const ssize_t totalBytesToSent = it.second.second;
-                //std::cout << "[DEBUG] " << pathName << "\n\t" << totalBytesSent << " | " << totalBytesToSent << std::endl;
-
-                if (totalBytesToSent <= -1) //Communicates the paths of the folder to be created
-                {
-                    this->mexToSend = string("NEW_DIR") + DELIMITATOR + pathName;
-                    utils::SendStringSynchronously(this->clientSocket.back(), this->mexToSend);
-                }
-                else //Send a file chunk by chunk
-                {
-                    //Set a buffer having an appropriate size
-                    const size_t bytesToRead = ((totalBytesToSent - totalBytesSent) >= BUFFER_SIZE) ? BUFFER_SIZE : (totalBytesToSent - totalBytesSent);
-
-                    //Set message to send before the chunk of the current file and wait for an ack.
-                    //This message provides the following information:
-                    //1) the name of the file;
-                    //2) if the file have to be created or if the chunk will be appended.
-                    //3) the size of the chunk.
-                    if (totalBytesSent > 0)
-                        this->mexToSend = string("FILE") + DELIMITATOR + string("APPEND") + DELIMITATOR + pathName + DELIMITATOR + std::to_string(bytesToRead);
-                    else
-                        this->mexToSend = string("FILE") + DELIMITATOR + string("NEW") + DELIMITATOR + pathName + DELIMITATOR + std::to_string(bytesToRead);
-                    utils::SendStringSynchronously(this->clientSocket.back(), this->mexToSend);
-                    this->receivedMex = utils::GetStringSynchronously(this->clientSocket.back()); //Wait for ACK.
-
-                    //Send a chunk of the current file
-                    const ssize_t bytesSent = utils::SendFile(this->clientSocket.back(), this->pathToWatch + pathName, totalBytesSent);
-                    if (bytesSent > (-1)) //A new portion of the current file has been sent.
-                    {
-                        //Update info about the current file.
-                        totalBytesSent += bytesSent;
-                        this->filesToSendMap.InsertOrUpdate(pathName, std::make_pair(totalBytesSent, totalBytesToSent));
-                    }
-                }
-
-                //Wait for ACK
-                this->receivedMex = utils::GetStringSynchronously(this->clientSocket.back());
-
-                //Check if a folder has been sent or if a file has TOTALLY been sent.
-                if (totalBytesSent >= totalBytesToSent)
-                {
-                    //Remove folder/file from the map because server now has it
-                    this->filesToSendMap.Remove(pathName);
-                }
+                //Close connection between client and server, print an error and exit.
+                this->mexToSend = "EXIT"; //It's also an exit condition.
+                utils::SendStringSynchronously(this->clientSocket.back(), this->mexToSend);
+                if (this->errorFromFSW == FileSystemWatcher::FileStatus::FS_Error_MissingMainFolder)
+                    std::cerr << "Cannot find the folder to monitor. Please, check its name" << std::endl;
+                else
+                    std::cerr << "An unexpected error occurs during the monitoring of the folder to monitor" << std::endl;
+                std::cout << "Connection closed" << std::endl;
             }
         }
         while (this->receivedMex != "EXIT" && this->mexToSend != "EXIT");
     }
-    catch (const std::exception& e)
+    catch (const boost::wrapexcept<boost::system::system_error>& boostE)
     {
-        std::cerr << "Exception\n\t" << e.what() << endl;
+        //End of file during a read from a socket or during a write on a socket.
+        std::cerr << "Server cannot be reached. Please, try later!" << std::endl;
+    }
+    catch (const std::exception& otherExeception)
+    {
+        std::cerr << "Something went wrong!" << std::endl;
     }
 }
 
@@ -156,17 +114,25 @@ void Client::NotifyFileChange(const string& path, const FileSystemWatcher::FileS
     const string fullPath = this->pathToWatch + path;
     //The size of the file or -1 if the path corresponds to a folder.
     ssize_t sizeOfFile;
-    if (fileStatus != FileSystemWatcher::FileStatus::FS_Erased)
-        sizeOfFile = (fs::is_directory(fullPath) == false) ? fs::file_size(fullPath) : -1;
+    if (fileStatus != FileSystemWatcher::FileStatus::FS_Erased || path.empty() == false)
+        sizeOfFile = (fs::exists(fullPath) == true && fs::is_directory(fullPath) == false) ? fs::file_size(fullPath) : -1;
 
     switch (fileStatus)
     {
+        case FileSystemWatcher::FileStatus::FS_Error_MissingMainFolder:
+        case FileSystemWatcher::FileStatus::FS_Error_Generic:
+            this->filesToDeleteSet.Clear();
+            this->filesToSendMap.Clear();
+            this->errorFromFSW = fileStatus;
+            break;
         case FileSystemWatcher::FileStatus::FS_Created:
         case FileSystemWatcher::FileStatus::FS_Modified:
-            this->filesToSendMap.InsertOrUpdate(path, std::make_pair(0, sizeOfFile));
+            if (fs::exists(fullPath) == true)
+                this->filesToSendMap.InsertOrUpdate(path, std::make_pair(0, sizeOfFile));
             break;
         case FileSystemWatcher::FileStatus::FS_Erased:
-            this->filesToDeleteSet.Insert(path);
+            if (fullPath != this->pathToWatch)
+                this->filesToDeleteSet.Insert(path);
             break;
         default:
             return;
@@ -175,6 +141,21 @@ void Client::NotifyFileChange(const string& path, const FileSystemWatcher::FileS
 #pragma endregion
 
 #pragma Private members:
+bool Client::ConnectToServer(void)
+{
+    io_service io_service;
+    //Socket creation
+    this->clientSocket.push_back(ip::tcp::socket(io_service));
+    //Try to connect to server
+    boost::system::error_code err;
+    this->clientSocket.back().connect(tcp::endpoint(address::from_string(this->address), this->port), err);
+    if (err)
+    {
+        return false;
+    }
+    return true;
+}
+
 void Client::DoLogin(void)
 {
     bool bFirstContinuationCondition;
@@ -245,5 +226,75 @@ unordered_map<string,string> Client::GetDigestsFromServer(void)
         //cout << "[DEBUG] Received message: " << this->receivedMex << endl;
     }
     return digestMap;
+}
+
+void Client::CommunicateDeletions(void)
+{
+    while (this->filesToDeleteSet.IsEmpty() == false)
+    {
+        //Extract the next element (it will be removed from the set of file to delete).
+        std::optional<string> pathToDelete = this->filesToDeleteSet.Extract();
+        if (pathToDelete.has_value() == true)
+        {
+            this->mexToSend = string("RM") + DELIMITATOR + pathToDelete.value();
+            //std::cout << "[DEBUG] Sending " << this->mexToSend << std::endl;
+            utils::SendStringSynchronously(this->clientSocket.back(), this->mexToSend);
+            //Wait for ACK.
+            this->receivedMex = utils::GetStringSynchronously(this->clientSocket.back());
+        }
+    }
+}
+
+void Client::CommunicateCreationOrChanges(void)
+{
+    for (auto const& it : this->filesToSendMap)
+    {
+        const string pathName = it.first;
+        ssize_t totalBytesSent = it.second.first;
+        const ssize_t totalBytesToSent = it.second.second;
+        //std::cout << "[DEBUG] " << pathName << "\n\t" << totalBytesSent << " | " << totalBytesToSent << std::endl;
+
+        if (totalBytesToSent <= -1) //Communicates the paths of the folder to be created
+        {
+            this->mexToSend = string("NEW_DIR") + DELIMITATOR + pathName;
+            utils::SendStringSynchronously(this->clientSocket.back(), this->mexToSend);
+        }
+        else //Send a file chunk by chunk
+        {
+            //Set a buffer having an appropriate size
+            const size_t bytesToRead = ((totalBytesToSent - totalBytesSent) >= BUFFER_SIZE) ? BUFFER_SIZE : (totalBytesToSent - totalBytesSent);
+
+            //Set message to send before the chunk of the current file and wait for an ack.
+            //This message provides the following information:
+            //1) the name of the file;
+            //2) if the file have to be created or if the chunk will be appended.
+            //3) the size of the chunk.
+            if (totalBytesSent > 0)
+                this->mexToSend = string("FILE") + DELIMITATOR + string("APPEND") + DELIMITATOR + pathName + DELIMITATOR + std::to_string(bytesToRead);
+            else
+                this->mexToSend = string("FILE") + DELIMITATOR + string("NEW") + DELIMITATOR + pathName + DELIMITATOR + std::to_string(bytesToRead);
+            utils::SendStringSynchronously(this->clientSocket.back(), this->mexToSend);
+            this->receivedMex = utils::GetStringSynchronously(this->clientSocket.back()); //Wait for ACK.
+
+            //Send a chunk of the current file
+            const ssize_t bytesSent = utils::SendFile(this->clientSocket.back(), this->pathToWatch + pathName, totalBytesSent);
+            if (bytesSent > (-1)) //A new portion of the current file has been sent.
+            {
+                //Update info about the current file.
+                totalBytesSent += bytesSent;
+                this->filesToSendMap.InsertOrUpdate(pathName, std::make_pair(totalBytesSent, totalBytesToSent));
+            }
+        }
+
+        //Wait for ACK
+        this->receivedMex = utils::GetStringSynchronously(this->clientSocket.back());
+
+        //Check if a folder has been sent or if a file has TOTALLY been sent.
+        if (totalBytesSent >= totalBytesToSent)
+        {
+            //Remove folder/file from the map because server now has it
+            this->filesToSendMap.Remove(pathName);
+        }
+    }
 }
 #pragma endregion

@@ -24,7 +24,7 @@ unordered_map<uint64_t, TCP_Connection::pointer> TCP_Connection::connectionsMap{
 
 #pragma region Constructor and destructor:
 TCP_Connection::TCP_Connection(tcp::socket io_context, const uint64_t _id)
-        :   socketServer(std::move(io_context)), failedLoginAttempts(0), id(_id), bToClose(false)
+        :   socketServer(std::move(io_context)), failedLoginAttempts(0), id(_id)
 {
 }
 
@@ -32,7 +32,10 @@ TCP_Connection::~TCP_Connection(void)
 {
     TCP_Connection::connectionsMap.erase(this->id);
     this->Disconnect();
-    std::cout << "[DEBUG] TCP_Connection --> Connection closed" << std::endl;
+    if (this->incomingMessage == "EXIT")
+        std::cout << "[DEBUG] TCP_Connection --> Connection closed by the CLIENT" << std::endl;
+    else
+        std::cout << "[DEBUG] TCP_Connection --> Connection closed by the SERVER" << std::endl;
 }
 #pragma endregion
 
@@ -59,6 +62,8 @@ void TCP_Connection::Start(void)
     }
     catch (const std::exception& ex)
     {
+        //Destructor will be called due to this instruction since there are no further reference to this connection.
+        TCP_Connection::connectionsMap.erase(this->id);
     }
 }
 
@@ -96,113 +101,11 @@ void TCP_Connection::ManageConnection(void)
         this->CheckSynchronization();
 
         /* INCOMING COMMANDS */
-        vector<string> receivedMexSubstrings;
-        this->outgoingMessage = "ACK";
-        do
-        {
-            //Get a command from the client
-            this->incomingMessage.clear(); //Reset incoming message.
-            this->incomingMessage = utils::GetStringSynchronously(this->socketServer);
-            receivedMexSubstrings = utils::GetSubstrings(this->incomingMessage, DELIMITATOR);
-            std::cout << "[DEBUG] Received\n";
-            for (auto const & it : receivedMexSubstrings)
-                std::cout << "\t" << it << std::endl;
-
-            //Deleting a path
-            if (receivedMexSubstrings[0] == "RM")
-            {
-                const string pathToRemove = this->userFolder + receivedMexSubstrings[1];
-                if (fs::exists(pathToRemove) == true)
-                    fs::remove(pathToRemove); //Perform deletion.
-            }
-
-            //Adding a path
-            if (receivedMexSubstrings[0] == "NEW_DIR")
-            {
-                fs::create_directory(this->userFolder + receivedMexSubstrings[1]);
-            }
-            else if (receivedMexSubstrings[0] == "FILE")
-            {
-                std::ofstream outputFile;
-
-                //Open file using info provided by the client.
-                if (receivedMexSubstrings[1] == "NEW")
-                    outputFile.open(this->userFolder + receivedMexSubstrings[2], std::ios_base::binary | std::ios_base::out);
-                else if (receivedMexSubstrings[1] == "APPEND")
-                    outputFile.open(this->userFolder + receivedMexSubstrings[2], std::ios_base::binary | std::ios_base::app);
-
-                //Send READY
-                utils::SendStringSynchronously(this->socketServer, "READY");
-
-                //Get a chunk of the file and save it.
-                const size_t byteToRead = std::stoi(receivedMexSubstrings[3]);
-                const ssize_t byteRead = utils::GetBytesSynchronously(this->socketServer, this->byteBuffer.data(), byteToRead);
-                if (outputFile.is_open() == true && byteRead == byteToRead)
-                {
-                    outputFile.write(this->byteBuffer.data(), byteRead);
-                    //Clear flags and close the file.
-                    outputFile.clear();
-                    outputFile.close();
-                }
-            }
-
-            //Send ACK - It says to client that server has received a message and so it's ready to get a new one.
-            utils::SendStringSynchronously(this->socketServer, this->outgoingMessage);
-        }   while (this->incomingMessage != "EXIT" && this->outgoingMessage != "EXIT");
-    }
-    else
-        TCP_Connection::connectionsMap.erase(this->id); //Destructor will be called due to this instruction.
-}
-
-void TCP_Connection::CheckSynchronization(void)
-{
-    //Creation of a list of pair (file name, digest).
-    list<pair<string,string>> digestList;
-    std::optional<string> digestStr;
-    for (auto &path_iterator : fs::recursive_directory_iterator(this->userFolder))
-    {
-        string pathName = path_iterator.path().string();
-        //Check if the current path is a directory or a regular file
-        if (fs::is_directory(path_iterator.path()) == false && fs::is_regular_file(path_iterator.path()) == false)
-            continue;
-
-        //Compute current digest.
-        digestStr = utils::DigestFromFile(pathName);
-        if (digestStr.has_value() == false)
-            continue;
-
-        //Remove main path from the current path
-        utils::EraseSubStr(pathName, this->userFolder);
-
-        //Store computed digest
-        digestList.push_back(std::make_pair(pathName, std::move(digestStr.value())));
+        this->ManageCommunicationWithClient();
     }
 
-    //For each computed digest, send both it and its file name to the the client annd say if the path is a directory or a file
-    while (digestList.empty() == false)
-    {
-        //Get an element from the list of digests.
-        auto const& digest_iterator = digestList.front();
-        this->outgoingMessage = digest_iterator.first + DELIMITATOR + digest_iterator.second;
-
-        //Send a message to client
-        utils::SendStringSynchronously(this->socketServer, this->outgoingMessage);
-
-        //Wait ACK
-        do
-        {
-            this->incomingMessage = utils::GetStringSynchronously(this->socketServer);
-        }   while (this->incomingMessage != "ACK_DIGEST");
-
-        //Remove element from the list.
-        digestList.pop_front();
-    }
-
-    //There are no further digests to send.
-    this->outgoingMessage = "DIGESTS_LIST_EMPTY";
-
-    //Send a message to client
-    utils::SendStringSynchronously(this->socketServer, this->outgoingMessage);
+    //Destructor will be called due to this instruction since there are no further reference to this connection.
+    TCP_Connection::connectionsMap.erase(this->id);
 }
 
 void TCP_Connection::DoLogin(void)
@@ -279,5 +182,113 @@ bool TCP_Connection::CheckLoginCredentials(void)
 
     //Wrong username and/or password
     return false;
+}
+
+void TCP_Connection::CheckSynchronization(void)
+{
+    //Creation of a list of pair (file name, digest).
+    list<pair<string,string>> digestList;
+    std::optional<string> digestStr;
+    for (auto &path_iterator : fs::recursive_directory_iterator(this->userFolder))
+    {
+        string pathName = path_iterator.path().string();
+        //Check if the current path is a directory or a regular file
+        if (fs::is_directory(path_iterator.path()) == false && fs::is_regular_file(path_iterator.path()) == false)
+            continue;
+
+        //Compute current digest.
+        digestStr = utils::DigestFromFile(pathName);
+        if (digestStr.has_value() == false)
+            continue;
+
+        //Remove main path from the current path
+        utils::EraseSubStr(pathName, this->userFolder);
+
+        //Store computed digest
+        digestList.push_back(std::make_pair(pathName, std::move(digestStr.value())));
+    }
+
+    //For each computed digest, send both it and its file name to the the client annd say if the path is a directory or a file
+    while (digestList.empty() == false)
+    {
+        //Get an element from the list of digests.
+        auto const& digest_iterator = digestList.front();
+        this->outgoingMessage = digest_iterator.first + DELIMITATOR + digest_iterator.second;
+
+        //Send a message to client
+        utils::SendStringSynchronously(this->socketServer, this->outgoingMessage);
+
+        //Wait ACK
+        do
+        {
+            this->incomingMessage = utils::GetStringSynchronously(this->socketServer);
+        }   while (this->incomingMessage != "ACK_DIGEST");
+
+        //Remove element from the list.
+        digestList.pop_front();
+    }
+
+    //There are no further digests to send.
+    this->outgoingMessage = "DIGESTS_LIST_EMPTY";
+
+    //Send a message to client
+    utils::SendStringSynchronously(this->socketServer, this->outgoingMessage);
+}
+
+void TCP_Connection::ManageCommunicationWithClient(void)
+{
+    vector<string> receivedMexSubstrings;
+    this->outgoingMessage = "ACK";
+    do
+    {
+        //Get a command from the client
+        this->incomingMessage.clear(); //Reset incoming message.
+        this->incomingMessage = utils::GetStringSynchronously(this->socketServer);
+        receivedMexSubstrings = utils::GetSubstrings(this->incomingMessage, DELIMITATOR);
+        std::cout << "[DEBUG] Received\n";
+        for (auto const & it : receivedMexSubstrings)
+            std::cout << "\t" << it << std::endl;
+
+        //Deleting a path
+        if (receivedMexSubstrings[0] == "RM")
+        {
+            const string pathToRemove = this->userFolder + receivedMexSubstrings[1];
+            if (fs::exists(pathToRemove) == true)
+                fs::remove(pathToRemove); //Perform deletion.
+        }
+
+        //Adding a path
+        if (receivedMexSubstrings[0] == "NEW_DIR")
+        {
+            fs::create_directory(this->userFolder + receivedMexSubstrings[1]);
+        }
+        else if (receivedMexSubstrings[0] == "FILE")
+        {
+            std::ofstream outputFile;
+
+            //Open file using info provided by the client.
+            if (receivedMexSubstrings[1] == "NEW")
+                outputFile.open(this->userFolder + receivedMexSubstrings[2], std::ios_base::binary | std::ios_base::out);
+            else if (receivedMexSubstrings[1] == "APPEND")
+                outputFile.open(this->userFolder + receivedMexSubstrings[2], std::ios_base::binary | std::ios_base::app);
+
+            //Send READY
+            utils::SendStringSynchronously(this->socketServer, "READY");
+
+            //Get a chunk of the file and save it.
+            const size_t byteToRead = std::stoi(receivedMexSubstrings[3]);
+            const ssize_t byteRead = utils::GetBytesSynchronously(this->socketServer, this->byteBuffer.data(), byteToRead);
+            if (outputFile.is_open() == true && byteRead == byteToRead)
+            {
+                outputFile.write(this->byteBuffer.data(), byteRead);
+                //Clear flags and close the file.
+                outputFile.clear();
+                outputFile.close();
+            }
+        }
+
+        //Send ACK - It says to client that server has received a message and so it's ready to get a new one.
+        utils::SendStringSynchronously(this->socketServer, this->outgoingMessage);
+    }   while (this->incomingMessage != "EXIT" && this->outgoingMessage != "EXIT");
 }
 #pragma endregion

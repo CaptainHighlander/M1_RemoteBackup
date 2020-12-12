@@ -62,6 +62,12 @@ public:
         return this->map.empty();
     }
 
+    void Clear(void)
+    {
+        const std::lock_guard<std::mutex> lg(this->mapMutex);
+        this->map.clear();
+    }
+
     #pragma region Iterators:
     inline iterator begin(void) noexcept
     {

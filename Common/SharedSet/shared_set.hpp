@@ -45,6 +45,12 @@ public:
         this->set.erase(element);
     }
 
+    void Clear(void)
+    {
+        const std::lock_guard<std::mutex> lg(this->setMutex);
+        this->set.clear();
+    }
+
     [[nodiscard]] bool Contains(const T1& element)
     {
         const std::lock_guard<std::mutex> lg(this->setMutex);

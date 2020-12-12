@@ -38,6 +38,7 @@ private:
     string receivedMex;
     string pathToWatch;
     FileSystemWatcher::FSW_up fsw;
+    uint8_t errorFromFSW;
 
     //More threads can access to these attribures respecting the RAII paradigm.
     //Since a SharedSet object encapsulates a set, the elements will be inserted in order. Similarly for a SharedMap.
@@ -45,7 +46,10 @@ private:
     SharedMap<string, pair<ssize_t,ssize_t>> filesToSendMap;
 
     #pragma region Private members:
+    [[nodiscard]] bool ConnectToServer(void);
     void DoLogin(void);
     [[nodiscard]] unordered_map<string,string> GetDigestsFromServer(void);
+    void CommunicateDeletions(void);
+    void CommunicateCreationOrChanges(void);
     #pragma endregion
 };
