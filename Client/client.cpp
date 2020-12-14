@@ -25,8 +25,11 @@ void signal_handler(int i)
 Client::Client(const string& _address, const uint16_t _port, const char* _pathToWatch)
     : address(_address), port(_port), bIsAuthenticated(false), errorFromFSW(0), pathToWatch(_pathToWatch)
 {
-    signalHandler = std::bind(&Client::SignalHandler, this, std::placeholders::_1);
+    while (this->pathToWatch.back() == '/')
+        this->pathToWatch.pop_back();
+
     //Set signals to catch.
+    signalHandler = std::bind(&Client::SignalHandler, this, std::placeholders::_1);
     signal(SIGINT, signal_handler);
     signal(SIGTERM, signal_handler);
     signal(SIGSEGV, signal_handler);

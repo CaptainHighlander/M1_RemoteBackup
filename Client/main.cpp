@@ -8,7 +8,6 @@ int main(int argc, char** argv)
         std::cerr << "Provide a path to monitor" << std::endl;
         return EXIT_FAILURE;
     }
-    std::cout << argv[1] << std::endl;
 
     Client client { "127.0.0.1", 1996, argv[1] };
     //Run a new client and wait for its termination

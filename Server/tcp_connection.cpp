@@ -254,7 +254,7 @@ void TCP_Connection::ManageCommunicationWithClient(void)
         {
             const string pathToRemove = this->userFolder + receivedMexSubstrings[1];
             if (fs::exists(pathToRemove) == true)
-                fs::remove(pathToRemove); //Perform deletion.
+                fs::remove_all(pathToRemove); //Perform deletion. Thanks to remove_all (as opposed to remove), if pathToRemove is a folder it will be recursively deleted.
         }
 
         //Adding a path
@@ -268,9 +268,7 @@ void TCP_Connection::ManageCommunicationWithClient(void)
 
             //Open file using info provided by the client.
             if (receivedMexSubstrings[1] == "NEW")
-            {
                 outputFile.open(this->userFolder + receivedMexSubstrings[2], std::ios_base::binary | std::ios_base::out);
-            }
             else if (receivedMexSubstrings[1] == "APPEND")
                 outputFile.open(this->userFolder + receivedMexSubstrings[2], std::ios_base::binary | std::ios_base::app);
 
