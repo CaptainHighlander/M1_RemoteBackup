@@ -18,7 +18,7 @@ class Client
 {
 public:
     #pragma region Constructors:
-    Client(const string& _address, const uint16_t _port);
+    Client(const string& _address, const uint16_t _port, const char* _pathToWatch);
     Client(Client const&) = delete;
     Client& operator=(Client const&) = delete;
     ~Client(void);

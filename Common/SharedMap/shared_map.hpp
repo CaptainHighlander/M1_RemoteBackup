@@ -2,13 +2,14 @@
 
 #include <mutex>
 #include <map>
+#include <iostream>
 
 ///This class allows to thread-safe use a generic and reduced map.
 template <class T1, class T2>
 class SharedMap
 {
 public:
-    typedef typename std::map<T1,T2> myMap;
+    typedef typename std::map<T1,T2, std::less<T1>> myMap;
     typedef typename myMap::iterator iterator;
     typedef typename myMap::const_iterator const_iterator;
 
@@ -44,10 +45,22 @@ public:
         return returnPair;
     }
 
-    void Remove(const T1& key)
+    iterator Remove(iterator it)
     {
         const std::lock_guard<std::mutex> lg(this->mapMutex);
-        this->map.erase(key);
+        return this->map.erase(it);
+    }
+
+    iterator Remove(const_iterator cit)
+    {
+        const std::lock_guard<std::mutex> lg(this->mapMutex);
+        return this->map.erase(cit);
+    }
+
+    size_t Remove(const T1& key)
+    {
+        const std::lock_guard<std::mutex> lg(this->mapMutex);
+        return this->map.erase(key);
     }
 
     [[nodiscard]] bool Contains(const T1& key)

@@ -268,7 +268,9 @@ void TCP_Connection::ManageCommunicationWithClient(void)
 
             //Open file using info provided by the client.
             if (receivedMexSubstrings[1] == "NEW")
+            {
                 outputFile.open(this->userFolder + receivedMexSubstrings[2], std::ios_base::binary | std::ios_base::out);
+            }
             else if (receivedMexSubstrings[1] == "APPEND")
                 outputFile.open(this->userFolder + receivedMexSubstrings[2], std::ios_base::binary | std::ios_base::app);
 

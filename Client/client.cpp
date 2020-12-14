@@ -22,8 +22,8 @@ void signal_handler(int i)
 #pragma endregion
 
 #pragma region Constructor:
-Client::Client(const string& _address, const uint16_t _port)
-    : address(_address), port(_port), bIsAuthenticated(false), errorFromFSW(0)
+Client::Client(const string& _address, const uint16_t _port, const char* _pathToWatch)
+    : address(_address), port(_port), bIsAuthenticated(false), errorFromFSW(0), pathToWatch(_pathToWatch)
 {
     signalHandler = std::bind(&Client::SignalHandler, this, std::placeholders::_1);
     //Set signals to catch.
@@ -66,8 +66,6 @@ void Client::Run(void)
             return; //User isn't logged: client will not be able to continue it'execution. So, it's stopped.
 
         //Init a file watcher checking for the synchronization between client and server
-        //TODO Get the path fron another source (e.g. command line params, configurations file).
-        this->pathToWatch = "./FoldersTest/Riccardo_Client";
         const FileSystemWatcher::notificationFunc fswActionFunc = std::bind(&Client::NotifyFileChange, this, std::placeholders::_1, std::placeholders::_2);
         this->fsw = FileSystemWatcher::Create(pathToWatch, this->GetDigestsFromServer(), fswActionFunc);
         fsw->StartWatch();
@@ -247,8 +245,11 @@ void Client::CommunicateDeletions(void)
 
 void Client::CommunicateCreationOrChanges(void)
 {
-    for (auto const& it : this->filesToSendMap)
+    auto iterator = this->filesToSendMap.begin();
+    while (iterator != this->filesToSendMap.end())
     {
+        auto it = (*iterator);
+
         const string pathName = it.first;
         ssize_t totalBytesSent = it.second.first;
         const ssize_t totalBytesToSent = it.second.second;
@@ -293,8 +294,10 @@ void Client::CommunicateCreationOrChanges(void)
         if (totalBytesSent >= totalBytesToSent)
         {
             //Remove folder/file from the map because server now has it
-            this->filesToSendMap.Remove(pathName);
+            iterator = this->filesToSendMap.Remove(iterator);
         }
-    }
+        else
+            iterator++; //Go to the next element.
+   }
 }
 #pragma endregion
