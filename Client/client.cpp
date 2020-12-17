@@ -106,7 +106,7 @@ void Client::Run(void)
     }
     catch (const std::exception& otherExeception)
     {
-        std::cerr << "Something went wrong!" << std::endl;
+        std::cerr << "Something went wrong! (" << otherExeception.what() << ")" << std::endl;
     }
 }
 
@@ -231,7 +231,7 @@ unordered_map<string,string> Client::GetDigestsFromServer(void)
 
 void Client::CommunicateDeletions(void)
 {
-    while (this->filesToDeleteSet.IsEmpty() == false)
+    while (this->filesToDeleteSet.IsEmpty() == false && this->errorFromFSW == 0)
     {
         //Extract the next element (it will be removed from the set of file to delete).
         std::optional<string> pathToDelete = this->filesToDeleteSet.Extract();
@@ -248,15 +248,31 @@ void Client::CommunicateDeletions(void)
 
 void Client::CommunicateCreationOrChanges(void)
 {
-    auto iterator = this->filesToSendMap.begin();
-    while (iterator != this->filesToSendMap.end())
-    {
-        auto it = (*iterator);
+    //Buffer to send when an error occurs during a reading a file.
+    static const char ERROR_BUFFER[BUFFER_SIZE] = {'\0'};
+    bool bError = false;
 
+    auto iterator = this->filesToSendMap.begin();
+    while (iterator != this->filesToSendMap.end() && this->errorFromFSW == 0)
+    {
+        bError = false;
+        //Reset incoming and outgoing messages.
+        this->receivedMex.clear();
+        this->mexToSend.clear();
+
+        //Get next path to send.
+        auto it = (*iterator);
         const string pathName = it.first;
         ssize_t totalBytesSent = it.second.first;
         const ssize_t totalBytesToSent = it.second.second;
-        //std::cout << "[DEBUG] " << pathName << "\n\t" << totalBytesSent << " | " << totalBytesToSent << std::endl;
+
+        //Check if path exist (e.g. a big folder can be added and instantly deleted)
+        if (fs::exists(this->pathToWatch + pathName) == false)
+        {
+            //Remove path from the map because it no longer exist and go to the next element.
+            iterator = this->filesToSendMap.Remove(iterator);
+            continue;
+        }
 
         if (totalBytesToSent <= -1) //Communicates the paths of the folder to be created
         {
@@ -278,7 +294,7 @@ void Client::CommunicateCreationOrChanges(void)
             else
                 this->mexToSend = string("FILE") + DELIMITATOR + string("NEW") + DELIMITATOR + pathName + DELIMITATOR + std::to_string(bytesToRead);
             utils::SendStringSynchronously(this->clientSocket.back(), this->mexToSend);
-            this->receivedMex = utils::GetStringSynchronously(this->clientSocket.back()); //Wait for ACK.
+            this->receivedMex = utils::GetStringSynchronously(this->clientSocket.back()); //Wait for READY.
 
             //Send a chunk of the current file
             const ssize_t bytesSent = utils::SendFile(this->clientSocket.back(), this->pathToWatch + pathName, totalBytesSent);
@@ -288,19 +304,32 @@ void Client::CommunicateCreationOrChanges(void)
                 totalBytesSent += bytesSent;
                 this->filesToSendMap.InsertOrUpdate(pathName, std::make_pair(totalBytesSent, totalBytesToSent));
             }
+            else //If an error occurs and a portion of the current file wasn't sent...
+            {
+                bError = true;
+                //Send an empty buffer.
+                utils::SendBytesSynchronously(this->clientSocket.back(), ERROR_BUFFER, bytesToRead);
+                //Remove file from the map because an error occurs and go to the next element.
+                iterator = this->filesToSendMap.Remove(iterator);
+            }
         }
 
         //Wait for ACK
         this->receivedMex = utils::GetStringSynchronously(this->clientSocket.back());
 
-        //Check if a folder has been sent or if a file has TOTALLY been sent.
-        if (totalBytesSent >= totalBytesToSent)
+        if (bError == false)
         {
-            //Remove folder/file from the map because server now has it
-            iterator = this->filesToSendMap.Remove(iterator);
+            //Check if a folder has been sent or if a file has TOTALLY been sent.
+            if (totalBytesSent >= totalBytesToSent)
+            {
+                //Remove folder/file from the map because server now has it and go to the next element.
+                iterator = this->filesToSendMap.Remove(iterator);
+            }
+            else
+            {
+                iterator++; //Go to the next element.
+            }
         }
-        else
-            iterator++; //Go to the next element.
    }
 }
 #pragma endregion

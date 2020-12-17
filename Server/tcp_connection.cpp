@@ -271,12 +271,12 @@ void TCP_Connection::ManageCommunicationWithClient(void)
                 outputFile.open(this->userFolder + receivedMexSubstrings[2], std::ios_base::binary | std::ios_base::out);
             else if (receivedMexSubstrings[1] == "APPEND")
                 outputFile.open(this->userFolder + receivedMexSubstrings[2], std::ios_base::binary | std::ios_base::app);
-
+            //Get the number of bytes to read.
+            const size_t byteToRead = std::stoi(receivedMexSubstrings[3]);
             //Send READY
             utils::SendStringSynchronously(this->socketServer, "READY");
 
             //Get a chunk of the file and save it.
-            const size_t byteToRead = std::stoi(receivedMexSubstrings[3]);
             const ssize_t byteRead = utils::GetBytesSynchronously(this->socketServer, this->byteBuffer.data(), byteToRead);
             if (outputFile.is_open() == true && byteRead == byteToRead)
             {
