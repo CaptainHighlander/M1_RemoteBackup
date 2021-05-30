@@ -63,4 +63,5 @@ private:
     const uint8_t MAX_NUMBER_OF_FAILED_LOGINS = 2;
 
     static unordered_map<uint64_t, pointer> connectionsMap;
+    static std::mutex m_connectionsMap;
 };

@@ -20,6 +20,7 @@ namespace fs = std::experimental::filesystem;
 
 #pragma region Static attributes:
 unordered_map<uint64_t, TCP_Connection::pointer> TCP_Connection::connectionsMap{};
+std::mutex TCP_Connection::m_connectionsMap;
 #pragma endregion
 
 #pragma region Constructor and destructor:
@@ -30,7 +31,10 @@ TCP_Connection::TCP_Connection(tcp::socket io_context, const uint64_t _id)
 
 TCP_Connection::~TCP_Connection(void)
 {
-    TCP_Connection::connectionsMap.erase(this->id);
+    {
+        const std::lock_guard<std::mutex> lg{TCP_Connection::m_connectionsMap};
+        TCP_Connection::connectionsMap.erase(this->id);
+    }
     this->Disconnect();
     if (this->incomingMessage == "EXIT")
         std::cout << "[DEBUG] TCP_Connection --> Connection closed by the CLIENT" << std::endl;
@@ -43,12 +47,18 @@ TCP_Connection::~TCP_Connection(void)
 TCP_Connection::pointer TCP_Connection::Create(tcp::socket io_context, const uint64_t id)
 {
     auto connectionPointer = pointer(new TCP_Connection(std::move(io_context), id));
-    TCP_Connection::connectionsMap[id] = connectionPointer;
+    {
+        const std::lock_guard<std::mutex> lg{TCP_Connection::m_connectionsMap};
+        TCP_Connection::connectionsMap[id] = connectionPointer;
+    }
     return connectionPointer;
 }
 
 unordered_map<uint64_t, TCP_Connection::pointer> TCP_Connection::GetConnectionsMap(void)
 {
+    //This function is not thread safe but it's invoked by the tcp_server class only when a signal has been catched.
+    //So, after this, the server will be stopped.
+    //Signal handling is very DUMB.
     return TCP_Connection::connectionsMap;
 }
 #pragma endregion
@@ -63,7 +73,10 @@ void TCP_Connection::Start(void)
     catch (const std::exception& ex)
     {
         //Destructor will be called due to this instruction since there are no further reference to this connection.
-        TCP_Connection::connectionsMap.erase(this->id);
+        {
+            const std::lock_guard<std::mutex> lg{TCP_Connection::m_connectionsMap};
+            TCP_Connection::connectionsMap.erase(this->id);
+        }
     }
 }
 
@@ -105,7 +118,10 @@ void TCP_Connection::ManageConnection(void)
     }
 
     //Destructor will be called due to this instruction since there are no further reference to this connection.
-    TCP_Connection::connectionsMap.erase(this->id);
+    {
+        const std::lock_guard<std::mutex> lg{TCP_Connection::m_connectionsMap};
+        TCP_Connection::connectionsMap.erase(this->id);
+    }
 }
 
 void TCP_Connection::DoLogin(void)
