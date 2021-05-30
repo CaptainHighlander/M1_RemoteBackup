@@ -61,6 +61,12 @@ unordered_map<uint64_t, TCP_Connection::pointer> TCP_Connection::GetConnectionsM
     //Signal handling is very DUMB.
     return TCP_Connection::connectionsMap;
 }
+
+size_t TCP_Connection::GetActiveConnectionsNumber(void)
+{
+    const std::lock_guard<std::mutex> lg{TCP_Connection::m_connectionsMap};
+    return TCP_Connection::connectionsMap.size();
+}
 #pragma endregion
 
 #pragma region Public members:

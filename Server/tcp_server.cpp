@@ -3,6 +3,8 @@
 #include <iostream> //TMP, only for debug.
 #include <boost/bind.hpp>
 
+#define MAX_ALLOWED_THREAD    100
+
 #pragma region Constructors and destructor:
     TCP_Server::TCP_Server(boost::asio::io_context& io_context, tcp version, uint16_t portNumber)
             : io_contextServer(io_context), signalsToIngnore(io_context), signals(io_context),
@@ -32,15 +34,23 @@
         acceptorServer.async_accept(
             [this](boost::system::error_code ec, tcp::socket socket)
             {
-                if (!ec)
+                //For each new incoming request, a thread will be created.
+                //The created thread  will handle the connection.
+                //N.B.: at the same time the server will be able to manage only a number of connections equal to MAX_ALLOWED_THREAD.
+                //All excess requests will be discarded until some of the active connections are terminated.
+                const size_t numberOfActiveConnections = TCP_Connection::GetActiveConnectionsNumber();
+                if (numberOfActiveConnections < MAX_ALLOWED_THREAD)
                 {
-                    //Create a new connection for the incoming client and execute it into a different thread
-                    TCP_Connection::pointer new_connection = TCP_Connection::Create(std::move(socket), this->nextConnectionId);
-                    this->nextConnectionId += 1;
-                    std::thread t(&TCP_Connection::Start, new_connection);
-                    t.detach();
+                    if (!ec)
+                    {
+                        //Create a new connection for the incoming client and execute it into a different thread
+                        TCP_Connection::pointer new_connection = TCP_Connection::Create(std::move(socket),
+                                                                                        this->nextConnectionId);
+                        this->nextConnectionId += 1;
+                        std::thread t(&TCP_Connection::Start, new_connection);
+                        t.detach();
+                    }
                 }
-
                 //Call StartAccept() to initiate the next accept operation.
                 this->StartAccept();
             }

@@ -27,6 +27,7 @@ public:
     #pragma region Static members:
     static pointer Create(tcp::socket io_context, const uint64_t id);
     [[nodiscard]] static unordered_map<uint64_t, pointer> GetConnectionsMap(void);
+    [[nodiscard]] static size_t GetActiveConnectionsNumber(void);
     #pragma endregion
 
     #pragma region Public members:
