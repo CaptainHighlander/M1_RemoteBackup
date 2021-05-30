@@ -39,6 +39,7 @@ private:
     string pathToWatch;
     FileSystemWatcher::FSW_up fsw;
     uint8_t errorFromFSW;
+    std::mutex m_errorFromFSW;
 
     //More threads can access to these attribures respecting the RAII paradigm.
     //Since a SharedSet object encapsulates a set, the elements will be inserted in order. Similarly for a SharedMap.
@@ -51,5 +52,7 @@ private:
     [[nodiscard]] unordered_map<string,string> GetDigestsFromServer(void);
     void CommunicateDeletions(void);
     void CommunicateCreationOrChanges(void);
+    [[nodiscard]] uint8_t GetErrorFromFWS(void);
+    void SetErrorFromFSW(const uint8_t errorCode);
     #pragma endregion
 };

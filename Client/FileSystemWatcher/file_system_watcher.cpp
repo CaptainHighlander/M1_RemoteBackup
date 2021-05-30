@@ -135,7 +135,7 @@ void FileSystemWatcher::CheckForCreatedOrModifiedPath(void)
             continue;
 
         //Compute digest of the file. Folders will always have an empty digest.
-        const std::optional<string> digest = utils::DigestFromFile(pathName);
+        std::optional<string> digest = utils::DigestFromFile(pathName);
         if (digest.has_value() == false)
             continue;
         //std::cout << "[DEBUG] " << pathName << " has digest:\n\t" << digest.value() << std::endl;
@@ -155,7 +155,7 @@ void FileSystemWatcher::CheckForCreatedOrModifiedPath(void)
         }
 
         //Update information about file.
-        this->monitoredFiles[pathName] = digest.value();
+        this->monitoredFiles[pathName] = std::move(digest.value());
     }
 }
 #pragma endregion

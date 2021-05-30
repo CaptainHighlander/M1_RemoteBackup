@@ -77,7 +77,7 @@ void Client::Run(void)
         do
         {
             //Check for errors of FileSystemWatcher
-            if (this->errorFromFSW == 0) //No errors
+            if (this->GetErrorFromFWS() == 0) //No errors
             {
                 //Communicates to the server the paths to be deleted
                 this->CommunicateDeletions();
@@ -90,7 +90,7 @@ void Client::Run(void)
                 //Close connection between client and server, print an error and exit.
                 this->mexToSend = "EXIT"; //It's also an exit condition.
                 utils::SendStringSynchronously(this->clientSocket.back(), this->mexToSend);
-                if (this->errorFromFSW == FileSystemWatcher::FileStatus::FS_Error_MissingMainFolder)
+                if (this->GetErrorFromFWS() == FileSystemWatcher::FileStatus::FS_Error_MissingMainFolder)
                     std::cerr << "Cannot find the folder to monitor. Please, check its name" << std::endl;
                 else
                     std::cerr << "An unexpected error occurs during the monitoring of the folder to monitor" << std::endl;
@@ -124,7 +124,7 @@ void Client::NotifyFileChange(const string& path, const FileSystemWatcher::FileS
         case FileSystemWatcher::FileStatus::FS_Error_Generic:
             this->filesToDeleteSet.Clear();
             this->filesToSendMap.Clear();
-            this->errorFromFSW = fileStatus;
+            this->SetErrorFromFSW(fileStatus);
             break;
         case FileSystemWatcher::FileStatus::FS_Created:
         case FileSystemWatcher::FileStatus::FS_Modified:
@@ -231,13 +231,13 @@ unordered_map<string,string> Client::GetDigestsFromServer(void)
 
 void Client::CommunicateDeletions(void)
 {
-    while (this->filesToDeleteSet.IsEmpty() == false && this->errorFromFSW == 0)
+    while (this->filesToDeleteSet.IsEmpty() == false && this->GetErrorFromFWS() == 0)
     {
         //Extract the next element (it will be removed from the set of file to delete).
         std::optional<string> pathToDelete = this->filesToDeleteSet.Extract();
         if (pathToDelete.has_value() == true)
         {
-            this->mexToSend = string("RM") + DELIMITATOR + pathToDelete.value();
+            this->mexToSend = string("RM") + DELIMITATOR + std::move(pathToDelete.value());
             //std::cout << "[DEBUG] Sending " << this->mexToSend << std::endl;
             utils::SendStringSynchronously(this->clientSocket.back(), this->mexToSend);
             //Wait for ACK.
@@ -253,7 +253,7 @@ void Client::CommunicateCreationOrChanges(void)
     bool bError = false;
 
     auto iterator = this->filesToSendMap.begin();
-    while (iterator != this->filesToSendMap.end() && this->errorFromFSW == 0)
+    while (iterator != this->filesToSendMap.end() && this->GetErrorFromFWS() == 0)
     {
         bError = false;
         //Reset incoming and outgoing messages.
@@ -331,5 +331,17 @@ void Client::CommunicateCreationOrChanges(void)
             }
         }
    }
+}
+
+uint8_t Client::GetErrorFromFWS(void)
+{
+    const std::lock_guard<std::mutex> lg{this->m_errorFromFSW};
+    return this->errorFromFSW;
+}
+
+void Client::SetErrorFromFSW(const uint8_t errorCode)
+{
+    const std::lock_guard<std::mutex> lg{this->m_errorFromFSW};
+    this->errorFromFSW = errorCode;
 }
 #pragma endregion
