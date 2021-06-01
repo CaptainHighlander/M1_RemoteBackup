@@ -110,9 +110,6 @@ void TCP_Connection::ManageConnection(void)
     //A new connection has been established:
     if (this->associatedUserID.empty() == false)
     {
-        //Wait for ACK after to AUTHENTICATED message.
-        this->incomingMessage = utils::GetStringSynchronously(this->socketServer);
-
         //Set folder associated to logged user.
         this->userFolder = USERS_PATH + this->associatedUserID;
 
@@ -240,12 +237,6 @@ void TCP_Connection::CheckSynchronization(void)
         //Send a message to client
         utils::SendStringSynchronously(this->socketServer, this->outgoingMessage);
 
-        //Wait ACK
-        do
-        {
-            this->incomingMessage = utils::GetStringSynchronously(this->socketServer);
-        }   while (this->incomingMessage != "ACK_DIGEST");
-
         //Remove element from the list.
         digestList.pop_front();
     }
@@ -260,7 +251,7 @@ void TCP_Connection::CheckSynchronization(void)
 void TCP_Connection::ManageCommunicationWithClient(void)
 {
     vector<string> receivedMexSubstrings;
-    this->outgoingMessage = "ACK";
+    this->outgoingMessage = "";
     do
     {
         //Get a command from the client
@@ -295,8 +286,6 @@ void TCP_Connection::ManageCommunicationWithClient(void)
                 outputFile.open(this->userFolder + receivedMexSubstrings[2], std::ios_base::binary | std::ios_base::app);
             //Get the number of bytes to read.
             const size_t byteToRead = std::stoi(receivedMexSubstrings[3]);
-            //Send READY
-            utils::SendStringSynchronously(this->socketServer, "READY");
 
             //Get a chunk of the file and save it.
             const ssize_t byteRead = utils::GetBytesSynchronously(this->socketServer, this->byteBuffer.data(), byteToRead);
@@ -309,8 +298,6 @@ void TCP_Connection::ManageCommunicationWithClient(void)
             }
         }
 
-        //Send ACK - It says to client that server has received a message and so it's ready to get a new one.
-        utils::SendStringSynchronously(this->socketServer, this->outgoingMessage);
     }   while (this->incomingMessage != "EXIT" && this->outgoingMessage != "EXIT");
 }
 #pragma endregion

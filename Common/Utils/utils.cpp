@@ -102,17 +102,37 @@ namespace utils
 
     void SendStringSynchronously(tcp::socket& socket, const string& message)
     {
-        write(socket, buffer(message + "\n"));
+        //Firstly, send string length
+        const size_t messageLength = message.size();
+        write(socket, buffer(&messageLength, sizeof(messageLength)));
+        //Secondly, send the string
+        auto bytesWritten = write(socket, buffer(message));
+        assert(bytesWritten == messageLength);
     }
 
     string GetStringSynchronously(tcp::socket& socket)
     {
-        boost::asio::streambuf buf;
-        read_until(socket, buf, '\n');
-        string data = buffer_cast<const char*>(buf.data());
-        // Popping last character '\n'
-        data.pop_back();
-        return data;
+        //Firstly, read string length
+        size_t messageLength = 0;
+        read(socket, buffer(&messageLength, sizeof(messageLength)));
+        //std::cout << "[DEBUG] messageLength " << messageLength << std::endl;
+        if (messageLength >= 1)
+        {
+            //Secondly, prepare a buffer big enough
+            char* buffer = new char[messageLength + 1];
+            //Thirdly, read a string of a wanted length
+            auto bytesRead = GetBytesSynchronously(socket, buffer, messageLength);
+            assert(bytesRead == messageLength);
+            //Then finalize the buffer and convert char* into a string
+            buffer[messageLength] = '\0';
+            std::string message{buffer};
+            //Finally, realese the buffer previously allocated
+            delete[] buffer;
+            //std::cout << "[DEBUG] message = " << message << std::endl;
+            return message;
+        }
+
+        return "";
     }
 
     void SendBytesSynchronously(tcp::socket& socket, const char bufferByte[], const size_t bufferSize)

@@ -75,6 +75,12 @@ public:
         return this->map.empty();
     }
 
+    [[nodiscard]] size_t Size(void)
+    {
+        const std::lock_guard<std::mutex> lg(this->mapMutex);
+        return this->map.size();
+    }
+
     void Clear(void)
     {
         const std::lock_guard<std::mutex> lg(this->mapMutex);
