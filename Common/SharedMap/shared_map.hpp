@@ -14,6 +14,10 @@ public:
     typedef typename myMap::const_iterator const_iterator;
 
     SharedMap(void) = default;
+    ~SharedMap()
+    {
+        auto a = 5;
+    }
 
     void InsertOrUpdate(const T1& key, const T2& value)
     {

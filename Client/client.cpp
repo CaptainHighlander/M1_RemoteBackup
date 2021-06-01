@@ -12,6 +12,9 @@ using std::endl;
 #define DELIMITATOR     "§DELIMITATOR§"
 #endif
 
+//Must be global
+boost::asio::io_context io_contextClient;
+
 #pragma region Signal handler:
 //std::function<void(int)> signalHandler = nullptr;
 //void signal_handler(int i)
@@ -37,10 +40,11 @@ Client::Client(const string& _address, const uint16_t _port, const char* _pathTo
 
 Client::~Client(void)
 {
+    std::cout << "[DEBUG] Start Destructor of client" << std::endl;
     //Close the socket
     if (this->clientSocket.empty() == false)
-        this->clientSocket.back().close();
-    //std::cout << "[DEBUG] Destructor of client" << std::endl;
+        this->clientSocket.front().close();
+    std::cout << "[DEBUG] End Destructor of client" << std::endl;
 }
 #pragma endregion
 
@@ -48,7 +52,7 @@ Client::~Client(void)
 void Client::SignalHandler(const int signum)
 {
     //A clean deletion is performed.
-    this->~Client();
+    //this->~Client();
 }
 
 void Client::Run(void)
@@ -144,9 +148,8 @@ void Client::NotifyFileChange(const string& path, const FileSystemWatcher::FileS
 #pragma Private members:
 bool Client::ConnectToServer(void)
 {
-    io_service io_service;
     //Socket creation
-    this->clientSocket.push_back(ip::tcp::socket(io_service));
+    this->clientSocket.push_back(ip::tcp::socket(io_contextClient));
     //Try to connect to server
     boost::system::error_code err;
     this->clientSocket.back().connect(tcp::endpoint(address::from_string(this->address), this->port), err);
@@ -325,13 +328,13 @@ void Client::CommunicateCreationOrChanges(void)
 
 uint8_t Client::GetErrorFromFWS(void)
 {
-    const std::lock_guard<std::mutex> lg{this->m_errorFromFSW};
+    std::lock_guard<std::mutex> lg{this->m_errorFromFSW};
     return this->errorFromFSW;
 }
 
 void Client::SetErrorFromFSW(const uint8_t errorCode)
 {
-    const std::lock_guard<std::mutex> lg{this->m_errorFromFSW};
+    std::lock_guard<std::mutex> lg{this->m_errorFromFSW};
     this->errorFromFSW = errorCode;
 }
 #pragma endregion
