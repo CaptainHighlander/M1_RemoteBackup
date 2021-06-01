@@ -13,12 +13,12 @@ using std::endl;
 #endif
 
 #pragma region Signal handler:
-std::function<void(int)> signalHandler = nullptr;
-void signal_handler(int i)
-{
-    signalHandler(i);
-    exit(i);
-}
+//std::function<void(int)> signalHandler = nullptr;
+//void signal_handler(int i)
+//{
+    //signalHandler(i);
+    //exit(i);
+//}
 #pragma endregion
 
 #pragma region Constructor:
@@ -29,10 +29,10 @@ Client::Client(const string& _address, const uint16_t _port, const char* _pathTo
         this->pathToWatch.pop_back();
 
     //Set signals to catch.
-    signalHandler = std::bind(&Client::SignalHandler, this, std::placeholders::_1);
-    signal(SIGINT, signal_handler);
-    signal(SIGTERM, signal_handler);
-    signal(SIGSEGV, signal_handler);
+    //signalHandler = std::bind(&Client::SignalHandler, this, std::placeholders::_1);
+    //signal(SIGINT, signal_handler);
+    //signal(SIGTERM, signal_handler);
+    //signal(SIGSEGV, signal_handler);
 }
 
 Client::~Client(void)
@@ -40,7 +40,7 @@ Client::~Client(void)
     //Close the socket
     if (this->clientSocket.empty() == false)
         this->clientSocket.back().close();
-    std::cout << "[DEBUG] Destructor of client" << std::endl;
+    //std::cout << "[DEBUG] Destructor of client" << std::endl;
 }
 #pragma endregion
 

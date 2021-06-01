@@ -17,19 +17,19 @@ public:
 
     void InsertOrUpdate(const T1& key, const T2& value)
     {
-        const std::lock_guard<std::mutex> lg(this->mapMutex);
+        std::lock_guard<std::mutex> lg(this->mapMutex);
         this->map[key] = value;
     }
 
     [[nodiscard]] std::optional<T2> Get(const T1& key)
     {
-        const std::lock_guard<std::mutex> lg(this->mapMutex);
+        std::lock_guard<std::mutex> lg(this->mapMutex);
         return (this->map.count(key) >= 1) ? this->map.at(key) : std::optional<T2>();
     }
 
     [[nodiscard]] std::optional<std::pair<T1,T2>> Extract(void)
     {
-        const std::lock_guard<std::mutex> lg(this->mapMutex);
+        std::lock_guard<std::mutex> lg(this->mapMutex);
 
         if (this->map.empty() == true)
             return std::nullopt; //There isn't an element to return.
@@ -47,75 +47,75 @@ public:
 
     iterator Remove(iterator it)
     {
-        const std::lock_guard<std::mutex> lg(this->mapMutex);
+        std::lock_guard<std::mutex> lg(this->mapMutex);
         return this->map.erase(it);
     }
 
     iterator Remove(const_iterator cit)
     {
-        const std::lock_guard<std::mutex> lg(this->mapMutex);
+        std::lock_guard<std::mutex> lg(this->mapMutex);
         return this->map.erase(cit);
     }
 
     size_t Remove(const T1& key)
     {
-        const std::lock_guard<std::mutex> lg(this->mapMutex);
+        std::lock_guard<std::mutex> lg(this->mapMutex);
         return this->map.erase(key);
     }
 
     [[nodiscard]] bool Contains(const T1& key)
     {
-        const std::lock_guard<std::mutex> lg(this->mapMutex);
+        std::lock_guard<std::mutex> lg(this->mapMutex);
         return (this->map.count(key) >= 1);
     }
 
     [[nodiscard]] bool IsEmpty(void)
     {
-        const std::lock_guard<std::mutex> lg(this->mapMutex);
+        std::lock_guard<std::mutex> lg(this->mapMutex);
         return this->map.empty();
     }
 
     [[nodiscard]] size_t Size(void)
     {
-        const std::lock_guard<std::mutex> lg(this->mapMutex);
+        std::lock_guard<std::mutex> lg(this->mapMutex);
         return this->map.size();
     }
 
     void Clear(void)
     {
-        const std::lock_guard<std::mutex> lg(this->mapMutex);
+        std::lock_guard<std::mutex> lg(this->mapMutex);
         this->map.clear();
     }
 
     #pragma region Iterators:
-    inline iterator begin(void) noexcept
+    iterator begin(void) noexcept
     {
-        const std::lock_guard<std::mutex> lg(this->mapMutex);
+        std::lock_guard<std::mutex> lg(this->mapMutex);
         return this->map.begin();
     }
 
-    inline const_iterator cbegin(void) const noexcept
+    const_iterator cbegin(void) const noexcept
     {
-        const std::lock_guard<std::mutex> lg(this->mapMutex);
+        std::lock_guard<std::mutex> lg(this->mapMutex);
         return this->map.cbegin();
     }
 
-    inline iterator end(void) noexcept
+    iterator end(void) noexcept
     {
-        const std::lock_guard<std::mutex> lg(this->mapMutex);
+        std::lock_guard<std::mutex> lg(this->mapMutex);
         return this->map.end();
     }
 
-    inline const_iterator cend(void) const noexcept
+    const_iterator cend(void) const noexcept
     {
-        const std::lock_guard<std::mutex> lg(this->mapMutex);
+        std::lock_guard<std::mutex> lg(this->mapMutex);
         return this->map.cend();
     }
     #pragma endregion
 private:
     SharedMap<T1,T2>& operator=(const SharedMap<T1,T2>& that);
     SharedMap<T1,T2>(const SharedMap<T1,T2>& that);
-
     std::mutex mapMutex;
+
     myMap map;
 };
