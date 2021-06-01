@@ -64,6 +64,6 @@ target_link_libraries(RemoteBackupServer sqlite3)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/Server/Database/users.db ${CMAKE_CURRENT_BINARY_DIR}/Database/users.db COPYONLY)
 
 # Copy users' folders (client side) from development folder to execution folder
-file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/FoldersTest DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/BACKUP_CLIENT/FoldersTest DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 # Copy users' folders (server side) from development folder to execution folder
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/Server/Users DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
